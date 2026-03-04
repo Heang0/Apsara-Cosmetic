@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     
     const formData = await request.formData();
     const file = formData.get('image') as File;
+    const kind = String(formData.get('kind') || 'product').toLowerCase();
     
     if (!file) {
       console.error('❌ No image file provided');
@@ -41,17 +42,28 @@ export async function POST(request: Request) {
 
     console.log('📦 Buffer created, size:', buffer.length);
 
-    // Upload to Cloudinary with optimization
-    const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
+    const uploadOptions = kind === 'profile'
+      ? {
+          folder: 'apsara/profiles',
+          transformation: [
+            { width: 512, height: 512, crop: 'limit' },
+            { quality: 'auto:good' },
+            { fetch_format: 'auto' }
+          ],
+        }
+      : {
           folder: 'apsara/products',
           transformation: [
             { width: 600, crop: 'limit' },
             { quality: 'auto' },
             { fetch_format: 'auto' }
           ],
-        },
+        };
+
+    // Upload to Cloudinary with optimization
+    const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        uploadOptions,
         (error, result) => {
           if (error) {
             console.error('❌ Cloudinary upload error:', error);

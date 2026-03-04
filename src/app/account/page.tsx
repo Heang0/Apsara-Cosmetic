@@ -22,6 +22,7 @@ import {
   CubeIcon,
   DocumentTextIcon,
   CreditCardIcon,
+  PhotoIcon,
   PlusIcon,
   XMarkIcon,
   PencilIcon,
@@ -85,6 +86,7 @@ export default function AccountPage() {
   const [profileName, setProfileName] = useState('');
   const [profilePhotoURL, setProfilePhotoURL] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [profileNotice, setProfileNotice] = useState('');
   const BAKONG_LOGO_URL = 'https://bakong.nbc.gov.kh/images/favicon.png';
 
@@ -200,6 +202,51 @@ export default function AccountPage() {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleProfilePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setProfileNotice(language === 'km' ? 'Please select an image file' : 'Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileNotice(language === 'km' ? 'Image must be smaller than 5MB' : 'Image must be smaller than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingProfileImage(true);
+      setProfileNotice('');
+
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('kind', 'profile');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload profile image');
+      }
+
+      setProfilePhotoURL(String(data.url || ''));
+      setProfileNotice(language === 'km'
+        ? 'Image uploaded. Click Save Profile to apply changes.'
+        : 'Image uploaded. Click Save Profile to apply changes.');
+    } catch (error) {
+      console.error('Profile image upload error:', error);
+      setProfileNotice(language === 'km' ? 'Failed to upload image' : 'Failed to upload image');
+    } finally {
+      setUploadingProfileImage(false);
+      event.target.value = '';
+    }
   };
 
   const handleProfileSave = async (e: React.FormEvent) => {
@@ -613,14 +660,27 @@ export default function AccountPage() {
                 </div>
 
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <label className="block text-xs text-gray-400 mb-1">{language === 'km' ? 'Profile photo URL' : 'Profile photo URL'}</label>
-                  <input
-                    type="url"
-                    value={profilePhotoURL}
-                    onChange={(e) => setProfilePhotoURL(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
-                  />
+                  <label className="block text-xs text-gray-400 mb-2">{language === 'km' ? 'Profile photo' : 'Profile photo'}</label>
+                  <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition">
+                    <PhotoIcon className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-gray-700">
+                      {uploadingProfileImage
+                        ? (language === 'km' ? 'Uploading...' : 'Uploading...')
+                        : (language === 'km' ? 'Upload image' : 'Upload image')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePhotoUpload}
+                      className="hidden"
+                      disabled={uploadingProfileImage}
+                    />
+                  </label>
+                  {profilePhotoURL && (
+                    <p className="mt-2 text-xs text-gray-400 break-all">
+                      {language === 'km' ? 'Selected image is optimized and ready.' : 'Selected image is optimized and ready.'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="border border-gray-200 rounded-lg p-4">
@@ -638,14 +698,14 @@ export default function AccountPage() {
                 </div>
 
                 {profileNotice && (
-                  <p className={`text-sm ${profileNotice.toLowerCase().includes('failed') ? 'text-red-500' : 'text-green-600'}`}>
+                  <p className={`text-sm ${/failed|must|please/i.test(profileNotice) ? 'text-red-500' : 'text-green-600'}`}>
                     {profileNotice}
                   </p>
                 )}
 
                 <button
                   type="submit"
-                  disabled={savingProfile}
+                  disabled={savingProfile || uploadingProfileImage}
                   className="w-full py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {savingProfile

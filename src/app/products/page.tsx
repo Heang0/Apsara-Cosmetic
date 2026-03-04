@@ -154,10 +154,6 @@ export default function ProductsPage() {
     document.getElementById('products-grid')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const bannerTitle = language === 'km' ? 'សម្រស់បែបខ្មែរ' : 'Khmer Beauty';
-  const bannerSubtitle = language === 'km' 
-    ? 'រក្សាសម្រស់តាមបែបប្រពៃណីខ្មែរ' 
-    : 'Discover traditional Khmer cosmetics';
   const searchPlaceholder = language === 'km' 
     ? 'ស្វែងរកផលិតផល...' 
     : 'Search products...';
@@ -166,20 +162,43 @@ export default function ProductsPage() {
 
   return (
     <Layout>
-      {/* Hero Banner with Parallax Effect */}
-      <div className="w-full h-64 md:h-96 bg-cover bg-center relative mb-8 overflow-hidden" 
-           style={{ 
-             backgroundImage: 'url(https://static.vecteezy.com/system/resources/previews/009/731/074/non_2x/cosmetics-or-skin-care-product-ads-with-bottle-banner-ad-for-beauty-products-leaf-and-sea-background-glittering-light-effect-design-vector.jpg)',
-             backgroundAttachment: 'fixed'
-           }}>
-        <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center animate-fade-in">
-          <div className="text-center text-white transform transition-transform duration-700 hover:scale-105">
-            <h1 className="khmer-text text-3xl md:text-5xl font-light mb-2 animate-slide-up">
-              {bannerTitle}
-            </h1>
-            <p className={(language === 'km' ? 'khmer-text' : 'english-text') + ' text-lg md:text-xl opacity-90 animate-slide-up animation-delay-200'}>
-              {bannerSubtitle}
-            </p>
+      {/* Hero Banner with Floating Product */}
+      <div className="relative w-full h-[420px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
+        <img
+          src="/images/banners/bannner1.jpg"
+          alt="Beauty banner"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-black/5" />
+
+        <div className="absolute inset-0 px-4 sm:px-6">
+          <div className="relative w-full h-full">
+            <div className="product-wrap product-left absolute left-[-6%] sm:left-[2%] lg:left-[7%] bottom-[7%] w-[220px] sm:w-[320px] lg:w-[430px] z-10">
+              <div className="floating-shadow shadow-a absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
+              <img
+                src="/images/seasonal/pro1.png"
+                alt="Floating cosmetic product"
+                className="floating-product product-a relative z-10 w-full h-auto object-contain"
+              />
+            </div>
+
+            <div className="product-wrap product-center absolute left-1/2 -translate-x-1/2 bottom-[5%] w-[290px] sm:w-[420px] lg:w-[560px] z-20">
+              <div className="floating-shadow shadow-b absolute left-1/2 -translate-x-1/2 bottom-0 w-[80%] h-6 sm:h-7 lg:h-8 rounded-full" />
+              <img
+                src="/images/seasonal/pro2.png"
+                alt="Floating cosmetic product"
+                className="floating-product product-b relative z-10 w-full h-auto object-contain"
+              />
+            </div>
+
+            <div className="product-wrap product-right absolute right-[-6%] sm:right-[2%] lg:right-[7%] bottom-[7%] w-[220px] sm:w-[320px] lg:w-[430px] z-10">
+              <div className="floating-shadow shadow-c absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
+              <img
+                src="/images/seasonal/pro3.png"
+                alt="Floating cosmetic product"
+                className="floating-product product-c relative z-10 w-full h-auto object-contain"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -267,6 +286,92 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes oceanFloat {
+          0% {
+            transform: translate3d(-10px, 0px, 0) rotate(-1deg);
+          }
+          25% {
+            transform: translate3d(-3px, -8px, 0) rotate(0.4deg);
+          }
+          50% {
+            transform: translate3d(10px, -3px, 0) rotate(1.2deg);
+          }
+          75% {
+            transform: translate3d(3px, -10px, 0) rotate(-0.6deg);
+          }
+          100% {
+            transform: translate3d(-10px, 0px, 0) rotate(-1deg);
+          }
+        }
+
+        @keyframes oceanShadow {
+          0%,
+          100% {
+            transform: translateX(-8px) scale(0.9);
+            opacity: 0.25;
+            filter: blur(10px);
+          }
+          50% {
+            transform: translateX(8px) scale(1.04);
+            opacity: 0.38;
+            filter: blur(12px);
+          }
+        }
+
+        .floating-product {
+          animation: oceanFloat 18s ease-in-out infinite;
+          transform-origin: 50% 85%;
+          will-change: transform;
+          filter:
+            drop-shadow(0 10px 18px rgba(0, 0, 0, 0.2))
+            drop-shadow(0 24px 36px rgba(0, 0, 0, 0.28));
+        }
+
+        .floating-shadow {
+          animation: oceanShadow 18s ease-in-out infinite;
+          will-change: transform, opacity, filter;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(14, 24, 38, 0.45) 0%,
+            rgba(14, 24, 38, 0.25) 45%,
+            rgba(14, 24, 38, 0.06) 75%,
+            rgba(14, 24, 38, 0) 100%
+          );
+          filter: blur(5px);
+        }
+
+        .product-a {
+          animation-duration: 20s;
+          animation-delay: -2.5s;
+        }
+
+        .product-b {
+          animation-duration: 18s;
+          animation-delay: -0.8s;
+        }
+
+        .product-c {
+          animation-duration: 22s;
+          animation-delay: -4.2s;
+        }
+
+        .shadow-a {
+          animation-duration: 20s;
+          animation-delay: -2.5s;
+        }
+
+        .shadow-b {
+          animation-duration: 18s;
+          animation-delay: -0.8s;
+        }
+
+        .shadow-c {
+          animation-duration: 22s;
+          animation-delay: -4.2s;
+        }
+      `}</style>
     </Layout>
   );
 }
