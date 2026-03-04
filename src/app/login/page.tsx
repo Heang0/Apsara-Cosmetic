@@ -7,7 +7,7 @@ import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import TelegramLogin from '@/components/TelegramLogin';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -36,11 +36,17 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.push('/account');
-      }
-    });
+    let unsubscribe = () => {};
+    try {
+      const firebaseAuth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+        if (user) {
+          router.push('/account');
+        }
+      });
+    } catch (error) {
+      console.error('Firebase auth init error:', error);
+    }
     return () => unsubscribe();
   }, [router]);
 
@@ -50,7 +56,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const firebaseAuth = getFirebaseAuth();
+      await signInWithEmailAndPassword(firebaseAuth, formData.email, formData.password);
     } catch (err: any) {
       console.error('Login error:', err);
       switch (err.code) {
@@ -74,7 +81,8 @@ export default function LoginPage() {
 
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const firebaseAuth = getFirebaseAuth();
+      await signInWithPopup(firebaseAuth, provider);
     } catch (err: any) {
       console.error('Google login error:', err);
       setError(err.message);
@@ -95,8 +103,9 @@ export default function LoginPage() {
     }
 
     try {
+      const firebaseAuth = getFirebaseAuth();
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        firebaseAuth,
         formData.email,
         formData.password
       );
@@ -121,7 +130,8 @@ export default function LoginPage() {
     setSuccess('');
 
     try {
-      await sendPasswordResetEmail(auth, formData.email);
+      const firebaseAuth = getFirebaseAuth();
+      await sendPasswordResetEmail(firebaseAuth, formData.email);
       setSuccess(
         language === 'km' 
           ? 'សូមពិនិត្យមើលអ៊ីមែលរបស់អ្នក' 

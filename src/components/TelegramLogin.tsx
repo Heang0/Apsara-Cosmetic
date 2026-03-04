@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { signInWithCustomToken } from 'firebase/auth';
 
 declare global {
@@ -48,8 +48,8 @@ export default function TelegramLogin() {
         const data = await res.json();
 
         if (res.ok) {
-          // Sign in to Firebase with custom token
-          await signInWithCustomToken(auth, data.firebaseToken);
+          const firebaseAuth = getFirebaseAuth();
+          await signInWithCustomToken(firebaseAuth, data.firebaseToken);
           router.push('/account');
         } else {
           alert(data.error || 'Telegram login failed');

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import axios, { AxiosError } from 'axios';
 import { 
   UserIcon, 
@@ -150,7 +150,7 @@ export default function AccountPage() {
 
   const fetchOrders = async () => {
     try {
-      const firebaseUser = auth.currentUser;
+      const firebaseUser = getFirebaseAuth().currentUser;
       if (!firebaseUser) return;
       
       const token = await firebaseUser.getIdToken();
@@ -371,6 +371,15 @@ export default function AccountPage() {
     });
   };
 
+  const memberSince = (() => {
+    try {
+      const creationTime = getFirebaseAuth().currentUser?.metadata?.creationTime;
+      return creationTime ? formatDate(creationTime) : 'N/A';
+    } catch {
+      return 'N/A';
+    }
+  })();
+
   if (!user) return null;
 
   const tabs = [
@@ -543,9 +552,7 @@ export default function AccountPage() {
                     {language === 'km' ? 'សមាជិកតាំងពី' : 'Member since'}
                   </p>
                   <p className="khmer-text text-gray-900">
-                    {auth.currentUser?.metadata?.creationTime
-                      ? formatDate(auth.currentUser.metadata.creationTime)
-                      : 'N/A'}
+                    {memberSince}
                   </p>
                 </div>
               </div>

@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 
 interface User {
   id: string;
@@ -28,30 +28,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Listen to Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        // Convert Firebase user to your User type
-        setUser({
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
-          email: firebaseUser.email || '',
-          phone: firebaseUser.phoneNumber || '',
-          photoURL: firebaseUser.photoURL || '',
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    let unsubscribe = () => {};
 
-    // Cleanup subscription
+    try {
+      const firebaseAuth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+        if (firebaseUser) {
+          setUser({
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+            email: firebaseUser.email || '',
+            phone: firebaseUser.phoneNumber || '',
+            photoURL: firebaseUser.photoURL || '',
+          });
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
+    } catch (error) {
+      console.error('Firebase auth initialization error:', error);
+      setUser(null);
+      setLoading(false);
+    }
+
     return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     try {
-      await firebaseSignOut(auth);
+      const firebaseAuth = getFirebaseAuth();
+      await firebaseSignOut(firebaseAuth);
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);

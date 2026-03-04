@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { 
   ArrowLeftIcon,
   ShoppingBagIcon,
@@ -68,7 +68,7 @@ export default function OrderDetailPage() {
 
   const fetchOrder = async () => {
     try {
-      const firebaseUser = auth.currentUser;
+      const firebaseUser = getFirebaseAuth().currentUser;
       if (!firebaseUser) {
         setError('Please login again');
         setLoading(false);
