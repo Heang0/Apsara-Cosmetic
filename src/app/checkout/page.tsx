@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { ShoppingBagIcon, CreditCardIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/context/AuthContext';
+import { auth } from '@/lib/firebase';
+import { ShoppingBagIcon, CreditCardIcon, MapPinIcon, PlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import axios, { AxiosError } from 'axios';
 
 interface CartItem {
@@ -17,14 +19,28 @@ interface CartItem {
   image?: string;
 }
 
+interface Address {
+  id: string;
+  name: string;
+  phone: string;
+  street: string;
+  city: string;
+  province: string;
+  isDefault: boolean;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const { items, totalPrice, clearCart, validateCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -34,16 +50,43 @@ export default function CheckoutPage() {
     province: '',
     notes: '',
   });
+  const [newAddress, setNewAddress] = useState({
+    name: '',
+    phone: '',
+    street: '',
+    city: '',
+    province: '',
+    isDefault: false,
+  });
 
-  // Validate cart on page load
+  // Load saved addresses
   useEffect(() => {
-    const validateCartBeforeCheckout = async () => {
-      if (items.length > 0) {
-        await validateCart();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    const savedAddresses = localStorage.getItem('userAddresses');
+    if (savedAddresses) {
+      const addresses = JSON.parse(savedAddresses);
+      setSavedAddresses(addresses);
+      
+      // Select default address if exists
+      const defaultAddress = addresses.find((a: Address) => a.isDefault);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+        setFormData({
+          name: defaultAddress.name,
+          email: user.email || '',
+          phone: defaultAddress.phone,
+          street: defaultAddress.street,
+          city: defaultAddress.city,
+          province: defaultAddress.province,
+          notes: '',
+        });
       }
-    };
-    validateCartBeforeCheckout();
-  }, []); // Runs once on mount
+    }
+  }, [user]);
 
   useEffect(() => {
     const hasItems = items.length > 0;
@@ -58,9 +101,62 @@ export default function CheckoutPage() {
     }
   }, [items, router]);
 
-  const shippingFee = 1.50;
-  const subtotal = totalPrice;
-  const total = subtotal + shippingFee;
+  const handleAddressSelect = (addressId: string) => {
+    const address = savedAddresses.find(a => a.id === addressId);
+    if (address) {
+      setSelectedAddressId(addressId);
+      setFormData({
+        name: address.name,
+        email: user?.email || '',
+        phone: address.phone,
+        street: address.street,
+        city: address.city,
+        province: address.province,
+        notes: formData.notes,
+      });
+    }
+  };
+
+  const handleAddNewAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const newAddressObj: Address = {
+      id: Date.now().toString(),
+      ...newAddress,
+    };
+
+    let updatedAddresses = [...savedAddresses, newAddressObj];
+    
+    if (newAddress.isDefault || savedAddresses.length === 0) {
+      updatedAddresses = updatedAddresses.map(addr => ({
+        ...addr,
+        isDefault: addr.id === newAddressObj.id,
+      }));
+    }
+
+    localStorage.setItem('userAddresses', JSON.stringify(updatedAddresses));
+    setSavedAddresses(updatedAddresses);
+    setSelectedAddressId(newAddressObj.id);
+    setFormData({
+      name: newAddressObj.name,
+      email: user?.email || '',
+      phone: newAddressObj.phone,
+      street: newAddressObj.street,
+      city: newAddressObj.city,
+      province: newAddressObj.province,
+      notes: formData.notes,
+    });
+    
+    setShowAddressForm(false);
+    setNewAddress({
+      name: '',
+      phone: '',
+      street: '',
+      city: '',
+      province: '',
+      isDefault: false,
+    });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -68,6 +164,10 @@ export default function CheckoutPage() {
       [e.target.name]: e.target.value,
     });
   };
+
+  const shippingFee = 1.50;
+  const subtotal = totalPrice;
+  const total = subtotal + shippingFee;
 
   const generateOrderNumber = () => {
     const date = new Date();
@@ -91,7 +191,6 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Validate cart before submitting
       await validateCart();
 
       const currentItems: CartItem[] = items.length > 0 ? items : JSON.parse(sessionStorage.getItem('checkoutItems') || '[]');
@@ -124,8 +223,6 @@ export default function CheckoutPage() {
         notes: formData.notes,
       };
 
-      console.log('Creating order:', orderData);
-
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,8 +243,6 @@ export default function CheckoutPage() {
         orderId: order.orderNumber,
         customerName: formData.name,
       });
-
-      console.log('QR Response:', qrRes.data);
 
       if (qrRes.data.qrCode) {
         setQrCode(qrRes.data.qrCode);
@@ -188,28 +283,19 @@ export default function CheckoutPage() {
     }).format(price);
   };
 
-  const checkoutTitle = language === 'km' ? 'ការបញ្ជាទិញ' : 'Checkout';
-  const contactInfoText = language === 'km' ? 'ព័ត៌មានទំនាក់ទំនង' : 'Contact Information';
-  const shippingText = language === 'km' ? 'អាសយដ្ឋានដឹកជញ្ជូន' : 'Shipping Address';
-  const orderSummaryText = language === 'km' ? 'សង្ខេបការបញ្ជាទិញ' : 'Order Summary';
-  const placeOrderText = language === 'km' ? 'បញ្ជាទិញ' : 'Place Order';
-  const scanQRText = language === 'km' ? 'ស្កេន QR ដើម្បីបង់ប្រាក់' : 'Scan QR to Pay';
-  const confirmPaymentText = language === 'km' ? 'បញ្ជាក់ការបង់ប្រាក់' : 'Confirm Payment';
-
   if (qrCode) {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
-            <h1 className="khmer-text text-2xl font-bold mb-4">{scanQRText}</h1>
+            <h1 className="khmer-text text-2xl font-bold mb-4">
+              {language === 'km' ? 'ស្កេន QR ដើម្បីបង់ប្រាក់' : 'Scan QR to Pay'}
+            </h1>
             <div className="bg-gray-50 p-4 rounded-lg inline-block mb-6">
               <img 
                 src={qrCode} 
                 alt="Bakong QR" 
                 className="w-64 h-64 mx-auto"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Payment+QR';
-                }}
               />
             </div>
             <p className="text-sm text-gray-500 mb-2">
@@ -222,7 +308,9 @@ export default function CheckoutPage() {
               onClick={handlePaymentComplete}
               className="bg-gray-900 text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition"
             >
-              <span className={language === 'km' ? 'khmer-text' : 'english-text'}>{confirmPaymentText}</span>
+              <span className={language === 'km' ? 'khmer-text' : 'english-text'}>
+                {language === 'km' ? 'បញ្ជាក់ការបង់ប្រាក់' : 'Confirm Payment'}
+              </span>
             </button>
           </div>
         </div>
@@ -233,96 +321,236 @@ export default function CheckoutPage() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
-        <h1 className="khmer-text text-2xl sm:text-3xl font-light text-gray-900 mb-8">{checkoutTitle}</h1>
+        <h1 className="khmer-text text-2xl sm:text-3xl font-light text-gray-900 mb-8">
+          {language === 'km' ? 'ការបញ្ជាទិញ' : 'Checkout'}
+        </h1>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Forms */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCardIcon className="w-5 h-5 text-gray-400" />
-                <h2 className="khmer-text text-lg font-medium">{contactInfoText}</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="name"
-                  placeholder={language === 'km' ? 'ឈ្មោះពេញ' : 'Full Name'}
-                  required
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
-                  required
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-              </div>
-            </div>
+            {/* Saved Addresses */}
+            {savedAddresses.length > 0 && !showAddressForm && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPinIcon className="w-5 h-5 text-gray-400" />
+                  <h2 className="khmer-text text-lg font-medium">
+                    {language === 'km' ? 'អាសយដ្ឋានរបស់ខ្ញុំ' : 'My Addresses'}
+                  </h2>
+                </div>
+                
+                <div className="space-y-3">
+                  {savedAddresses.map((address) => (
+                    <label
+                      key={address.id}
+                      className={`block p-4 border rounded-lg cursor-pointer transition ${
+                        selectedAddressId === address.id
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="selectedAddress"
+                          checked={selectedAddressId === address.id}
+                          onChange={() => handleAddressSelect(address.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="khmer-text font-medium">{address.name}</p>
+                            {address.isDefault && (
+                              <span className="text-xs bg-gray-900 text-white px-2 py-0.5 rounded">
+                                {language === 'km' ? 'លំនាំដើម' : 'Default'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{address.phone}</p>
+                          <p className="text-sm text-gray-600">
+                            {address.street}, {address.city}, {address.province}
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPinIcon className="w-5 h-5 text-gray-400" />
-                <h2 className="khmer-text text-lg font-medium">{shippingText}</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAddressForm(true)}
+                  className="mt-4 w-full py-3 border-2 border-dashed border-gray-200 rounded-lg hover:border-gray-900 transition flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  <span className="khmer-text">
+                    {language === 'km' ? 'បន្ថែមអាសយដ្ឋានថ្មី' : 'Add New Address'}
+                  </span>
+                </button>
               </div>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  name="street"
-                  placeholder={language === 'km' ? 'អាសយដ្ឋានលម្អិត' : 'Street Address'}
-                  required
-                  value={formData.street}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            )}
+
+            {/* Add New Address Form */}
+            {showAddressForm && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="khmer-text text-lg font-medium">
+                    {language === 'km' ? 'បន្ថែមអាសយដ្ឋានថ្មី' : 'Add New Address'}
+                  </h2>
+                  {savedAddresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressForm(false)}
+                      className="text-sm text-gray-500 hover:text-gray-900"
+                    >
+                      {language === 'km' ? 'បោះបង់' : 'Cancel'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
                   <input
                     type="text"
-                    name="city"
-                    placeholder={language === 'km' ? 'ទីក្រុង/ស្រុក' : 'City/District'}
-                    required
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    placeholder={language === 'km' ? 'ឈ្មោះអ្នកទទួល' : 'Recipient Name'}
+                    value={newAddress.name}
+                    onChange={(e) => setNewAddress({...newAddress, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <input
+                    type="tel"
+                    placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
+                    value={newAddress.phone}
+                    onChange={(e) => setNewAddress({...newAddress, phone: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                   />
                   <input
                     type="text"
-                    name="province"
-                    placeholder={language === 'km' ? 'ខេត្ត' : 'Province'}
+                    placeholder={language === 'km' ? 'អាសយដ្ឋានលម្អិត' : 'Street Address'}
+                    value={newAddress.street}
+                    onChange={(e) => setNewAddress({...newAddress, street: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder={language === 'km' ? 'ទីក្រុង' : 'City'}
+                      value={newAddress.city}
+                      onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    />
+                    <input
+                      type="text"
+                      placeholder={language === 'km' ? 'ខេត្ត' : 'Province'}
+                      value={newAddress.province}
+                      onChange={(e) => setNewAddress({...newAddress, province: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newAddress.isDefault}
+                      onChange={(e) => setNewAddress({...newAddress, isDefault: e.target.checked})}
+                      className="w-4 h-4 border-gray-300 rounded"
+                    />
+                    <span className="khmer-text text-sm text-gray-600">
+                      {language === 'km' ? 'កំណត់ជាអាសយដ្ឋានលំនាំដើម' : 'Set as default address'}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddNewAddress}
+                    className="w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
+                  >
+                    {language === 'km' ? 'រក្សាទុក' : 'Save Address'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Manual Entry Form (shown if no saved addresses) */}
+            {savedAddresses.length === 0 && !showAddressForm && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPinIcon className="w-5 h-5 text-gray-400" />
+                  <h2 className="khmer-text text-lg font-medium">
+                    {language === 'km' ? 'អាសយដ្ឋានដឹកជញ្ជូន' : 'Shipping Address'}
+                  </h2>
+                </div>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder={language === 'km' ? 'ឈ្មោះពេញ' : 'Full Name'}
                     required
-                    value={formData.province}
+                    value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
+                    required
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <input
+                    type="text"
+                    name="street"
+                    placeholder={language === 'km' ? 'អាសយដ្ឋានលម្អិត' : 'Street Address'}
+                    required
+                    value={formData.street}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      name="city"
+                      placeholder={language === 'km' ? 'ទីក្រុង/ស្រុក' : 'City/District'}
+                      required
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    />
+                    <input
+                      type="text"
+                      name="province"
+                      placeholder={language === 'km' ? 'ខេត្ត' : 'Province'}
+                      required
+                      value={formData.province}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    />
+                  </div>
+                  <textarea
+                    name="notes"
+                    placeholder={language === 'km' ? 'កំណត់ចំណាំ (មិនចាំបាច់)' : 'Order Notes (optional)'}
+                    rows={3}
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                   />
                 </div>
-                <textarea
-                  name="notes"
-                  placeholder={language === 'km' ? 'កំណត់ចំណាំ (មិនចាំបាច់)' : 'Order Notes (optional)'}
-                  rows={3}
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
               </div>
-            </div>
+            )}
           </div>
 
+          {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-24">
-              <h2 className="khmer-text text-lg font-medium mb-4">{orderSummaryText}</h2>
+              <h2 className="khmer-text text-lg font-medium mb-4">
+                {language === 'km' ? 'សង្ខេបការបញ្ជាទិញ' : 'Order Summary'}
+              </h2>
               
               <div className="space-y-4 mb-4 max-h-96 overflow-auto">
                 {items.map((item: CartItem) => (
@@ -386,7 +614,7 @@ export default function CheckoutPage() {
                 className="w-full mt-6 bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
               >
                 <span className={language === 'km' ? 'khmer-text' : 'english-text'}>
-                  {loading ? (language === 'km' ? 'កំពុងដំណើរការ...' : 'Processing...') : placeOrderText}
+                  {loading ? (language === 'km' ? 'កំពុងដំណើរការ...' : 'Processing...') : (language === 'km' ? 'បញ្ជាទិញ' : 'Place Order')}
                 </span>
               </button>
             </div>

@@ -1,13 +1,14 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bars3Icon, XMarkIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon, ShoppingCartIcon, UserIcon } from '@heroicons/react/24/outline';
 import LanguageSwitcher from './LanguageSwitcher';
 import FloatingCart from './FloatingCart';
 import { useLanguage } from '@/context/LanguageContext';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -15,6 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { language } = useLanguage();
   const { totalItems } = useCart();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     setIsAdmin(pathname?.startsWith('/admin') || false);
@@ -26,10 +28,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: '/contact', labelKm: 'ទំនាក់ទំនង', labelEn: 'Contact' },
   ];
 
-  // Banner text based on language - now with proper font
   const bannerText = language === 'km' 
-    ? 'សេវាដឹកជញ្ជូនឥតគិតថ្លៃ សម្រាប់ការបញ្ជាទិញលើស '
-    : 'Free shipping on orders over ';
+    ? 'សេវាដឹកជញ្ជូនឥតគិតថ្លៃ សម្រាប់ការបញ្ជាទិញលើស $40'
+    : 'Free shipping on orders over $40';
 
   if (isAdmin) {
     return <>{children}</>;
@@ -37,7 +38,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      {/* Banner - Fixed: Added proper font class */}
       <div className="bg-gray-900 text-white text-center py-2 text-sm">
         <p className={language === 'km' ? 'khmer-text' : 'english-text'}>
           {bannerText}
@@ -47,11 +47,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 sm:h-20">
-            {/* Logo - Now only Khmer text, no English */}
+            {/* Logo */}
             <Link href="/products" className="flex items-center">
               <span className="khmer-text text-2xl sm:text-3xl font-bold text-gray-900">អប្សរា</span>
             </Link>
 
+            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8">
               {menuItems.map((item) => (
                 <Link
@@ -66,7 +67,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               ))}
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Right side icons */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Cart Icon */}
               <Link href="/cart" className="relative p-2 hover:bg-gray-50 rounded-full transition">
                 <ShoppingCartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
@@ -77,8 +79,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </Link>
 
+              {/* User Icon - Links to login or account */}
+              {isAuthenticated ? (
+                <Link 
+                  href="/account" 
+                  className="p-2 hover:bg-gray-50 rounded-full transition flex items-center gap-2"
+                >
+                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <UserIcon className="w-4 h-4 text-gray-600" />
+                  </div>
+                  <span className="hidden sm:block text-sm text-gray-700">
+                    {user?.name?.split(' ')[0] || 'Account'}
+                  </span>
+                </Link>
+              ) : (
+                <Link 
+                  href="/login" 
+                  className="p-2 hover:bg-gray-50 rounded-full transition"
+                >
+                  <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
+                </Link>
+              )}
+
               <LanguageSwitcher />
 
+              {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 hover:bg-gray-50 rounded-lg transition"
@@ -92,6 +117,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
+          {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-gray-100">
               <div className="flex flex-col space-y-3">
@@ -107,6 +133,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </span>
                   </Link>
                 ))}
+                {!isAuthenticated && (
+                  <Link
+                    href="/login"
+                    className="block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {language === 'km' ? 'ចូល' : 'Login'}
+                  </Link>
+                )}
               </div>
             </div>
           )}

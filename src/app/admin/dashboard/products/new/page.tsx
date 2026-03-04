@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,9 +11,10 @@ interface Category {
   nameEn: string;
 }
 
-interface ImageFile {
+interface LocalImage {
   file: File;
   preview: string;
+  id: string;
 }
 
 export default function NewProduct() {
@@ -22,7 +23,7 @@ export default function NewProduct() {
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [images, setImages] = useState<ImageFile[]>([]);
+  const [localImages, setLocalImages] = useState<LocalImage[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     nameEn: '',
@@ -52,11 +53,27 @@ export default function NewProduct() {
   };
 
   const handleImageSelected = (file: File, preview: string) => {
-    setImages([...images, { file, preview }]);
+    // Check for duplicate
+    const isDuplicate = localImages.some(img => 
+      img.file.name === file.name && img.file.size === file.size
+    );
+
+    if (isDuplicate) {
+      alert('រូបភាពនេះត្រូវបានបន្ថែមរួចហើយ');
+      return;
+    }
+
+    const newImage: LocalImage = {
+      file,
+      preview,
+      id: Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+    };
+
+    setLocalImages([...localImages, newImage]);
   };
 
   const handleImageRemove = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
+    setLocalImages(localImages.filter((_, i) => i !== index));
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -73,40 +90,45 @@ export default function NewProduct() {
 
   const uploadImagesToCloudinary = async (): Promise<string[]> => {
     const uploadedUrls: string[] = [];
-    
-    for (const image of images) {
-      const formData = new FormData();
-      formData.append('image', image.file);
-      
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!res.ok) {
-        throw new Error('Failed to upload image');
+    setUploading(true);
+
+    try {
+      for (let i = 0; i < localImages.length; i++) {
+        const image = localImages[i];
+        const formData = new FormData();
+        formData.append('image', image.file);
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to upload image ${i + 1}`);
+        }
+        
+        const data = await res.json();
+        uploadedUrls.push(data.url);
       }
       
-      const data = await res.json();
-      uploadedUrls.push(data.url);
+      return uploadedUrls;
+    } finally {
+      setUploading(false);
     }
-    
-    return uploadedUrls;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (images.length === 0) {
+    if (localImages.length === 0) {
       alert('សូមបន្ថែមរូបភាពយ៉ាងហោចណាស់មួយ');
       return;
     }
 
-    setUploading(true);
     setLoading(true);
 
     try {
-      // Upload images to Cloudinary
+      // Upload images to Cloudinary only when saving
       const imageUrls = await uploadImagesToCloudinary();
       
       const token = localStorage.getItem('adminToken');
@@ -117,9 +139,14 @@ export default function NewProduct() {
           'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          nameEn: formData.nameEn,
+          description: formData.description,
           price: parseFloat(formData.price),
+          category: formData.category,
+          categoryEn: formData.categoryEn,
           stock: parseInt(formData.stock),
+          isOnSale: formData.isOnSale,
           salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
           images: imageUrls,
         }),
@@ -133,65 +160,62 @@ export default function NewProduct() {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('An error occurred while uploading images');
+      alert('An error occurred while creating product');
     } finally {
-      setUploading(false);
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      <div className="mb-6 md:mb-8">
-        <h1 className="khmer-text text-xl md:text-2xl font-bold text-gray-900">បន្ថែមផលិតផលថ្មី</h1>
-        <p className="english-text text-sm text-gray-500 mt-1">Add New Product</p>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="khmer-text text-2xl font-bold text-gray-900">បន្ថែមផលិតផលថ្មី</h1>
+        <p className="english-text text-gray-500 mt-1">Add New Product</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left Column - Product Info */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <span className="khmer-text">ឈ្មោះ (ខ្មែរ)</span>{' '}
-                <span className="english-text text-xs text-gray-400">(Khmer)</span>{' '}
-                <span className="text-red-500">*</span>
+                <span className="khmer-text">ឈ្មោះ (ខ្មែរ)</span>
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="khmer-text w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                className="khmer-text w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 placeholder="ឧ: ប្រេងដូង"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <span className="english-text">Name (English)</span>{' '}
-                <span className="text-red-500">*</span>
+                <span className="english-text">Name (English)</span>
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.nameEn}
                 onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                className="english-text w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                className="english-text w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 placeholder="Ex: Coconut Oil"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <span className="khmer-text">ការពិពណ៌នា</span>{' '}
-                <span className="english-text text-xs text-gray-400">(Description)</span>
+                <span className="khmer-text">ការពិពណ៌នា</span>
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 placeholder="Product description..."
               />
             </div>
@@ -199,8 +223,8 @@ export default function NewProduct() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <span className="english-text">Price ($)</span>{' '}
-                  <span className="text-red-500">*</span>
+                  <span className="english-text">Price ($)</span>
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="number"
@@ -208,43 +232,42 @@ export default function NewProduct() {
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <span className="english-text">Stock</span>{' '}
-                  <span className="text-red-500">*</span>
+                  <span className="english-text">Stock</span>
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="number"
                   required
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <span className="khmer-text">ប្រភេទ</span>{' '}
-                <span className="english-text text-xs text-gray-400">(Category)</span>{' '}
-                <span className="text-red-500">*</span>
+                <span className="khmer-text">ប្រភេទ</span>
+                <span className="text-red-500 ml-1">*</span>
               </label>
               {loadingCategories ? (
-                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
                   Loading...
                 </div>
               ) : categories.length > 0 ? (
                 <select
                   required
                   onChange={handleCategoryChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                   defaultValue=""
                 >
-                  <option value="" disabled>ជ្រើសរើសប្រភេទ / Select category</option>
+                  <option value="" disabled>ជ្រើសរើសប្រភេទ</option>
                   {categories.map((cat) => (
                     <option key={cat._id} value={cat._id}>
                       {cat.name} / {cat.nameEn}
@@ -269,18 +292,15 @@ export default function NewProduct() {
                   onChange={(e) => setFormData({ ...formData, isOnSale: e.target.checked })}
                   className="w-4 h-4 text-gray-900 border-gray-300 rounded"
                 />
-                <div>
-                  <span className="khmer-text text-sm text-gray-700">ដាក់លក់បញ្ចុះតម្លៃ</span>
-                  <p className="english-text text-xs text-gray-400">Put on sale</p>
-                </div>
+                <span className="khmer-text text-sm text-gray-700">ដាក់លក់បញ្ចុះតម្លៃ</span>
               </label>
             </div>
 
             {formData.isOnSale && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <span className="english-text">Sale Price ($)</span>{' '}
-                  <span className="text-red-500">*</span>
+                  <span className="english-text">Sale Price ($)</span>
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="number"
@@ -288,7 +308,7 @@ export default function NewProduct() {
                   required
                   value={formData.salePrice}
                   onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
             )}
@@ -297,52 +317,64 @@ export default function NewProduct() {
           {/* Right Column - Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <span className="khmer-text">រូបភាពផលិតផល</span>{' '}
-              <span className="english-text text-xs text-gray-400">(Product Images)</span>{' '}
-              <span className="text-red-500">*</span>
+              <span className="khmer-text">រូបភាពផលិតផល</span>
+              <span className="text-red-500 ml-1">*</span>
             </label>
-            <p className="khmer-text text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-400 mb-4">
               អាចបន្ថែមបានរហូតដល់ 5 រូប (រូបទីមួយនឹងក្លាយជារូបមេ)
             </p>
-            <p className="english-text text-xs text-gray-400 mb-4">
-              Up to 5 images (first image will be main)
-            </p>
             
-            <div className="space-y-3">
-              {images.map((img, index) => (
-                <ImageUpload
-                  key={index}
-                  index={index}
-                  preview={img.preview}
-                  onImageSelected={handleImageSelected}
-                  onImageRemove={handleImageRemove}
-                />
+            <div className="space-y-4">
+              {localImages.map((img, index) => (
+                <div key={img.id} className="relative border rounded-lg p-2 bg-gray-50">
+                  <img 
+                    src={img.preview} 
+                    alt={`Preview ${index + 1}`} 
+                    className="w-full h-32 object-cover rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleImageRemove(index)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
               
-              {images.length < 5 && (
+              {localImages.length < 5 && (
                 <ImageUpload
-                  index={images.length}
+                  index={localImages.length}
                   onImageSelected={handleImageSelected}
                   onImageRemove={handleImageRemove}
                 />
               )}
             </div>
+
+            <p className="text-xs text-gray-400 mt-4">
+              {localImages.length}/5 រូបភាព
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-6 pt-6 border-t">
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t">
           <Link
             href="/admin/dashboard/products"
-            className="khmer-text text-center px-6 py-2 text-sm text-gray-700 hover:text-gray-900 transition border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
           >
             បោះបង់
           </Link>
           <button
             type="submit"
-            disabled={loading}
-            className="khmer-text px-6 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+            disabled={loading || uploading}
+            className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
           >
-            {uploading ? 'កំពុងបង្ហោះរូបភាព...' : loading ? 'កំពុងរក្សាទុក...' : 'បន្ថែមផលិតផល'}
+            {uploading 
+              ? 'កំពុងបង្ហោះរូបភាព...' 
+              : loading 
+                ? 'កំពុងរក្សាទុក...' 
+                : 'បន្ថែមផលិតផល'
+            }
           </button>
         </div>
       </form>

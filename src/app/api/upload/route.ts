@@ -15,25 +15,35 @@ interface CloudinaryUploadResult {
   [key: string]: any;
 }
 
+// Increase body size limit for large images - using Next.js 16+ method
+export const maxDuration = 30; // 30 seconds timeout
+
 export async function POST(request: Request) {
   try {
+    console.log('📤 Upload API called');
+    
     const formData = await request.formData();
     const file = formData.get('image') as File;
     
     if (!file) {
+      console.error('❌ No image file provided');
       return NextResponse.json(
         { error: 'No image file provided' },
         { status: 400 }
       );
     }
 
+    console.log('📁 File received:', file.name, 'size:', file.size, 'type:', file.type);
+
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    console.log('📦 Buffer created, size:', buffer.length);
+
     // Upload to Cloudinary with optimization
     const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
+      const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'apsara/products',
           transformation: [
@@ -43,10 +53,17 @@ export async function POST(request: Request) {
           ],
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result as CloudinaryUploadResult);
+          if (error) {
+            console.error('❌ Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('✅ Cloudinary upload success:', result?.secure_url);
+            resolve(result as CloudinaryUploadResult);
+          }
         }
-      ).end(buffer);
+      );
+
+      uploadStream.end(buffer);
     });
 
     return NextResponse.json({
@@ -55,7 +72,7 @@ export async function POST(request: Request) {
       publicId: result.public_id,
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
       { error: 'Failed to upload image: ' + errorMessage },
