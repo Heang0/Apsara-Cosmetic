@@ -5,7 +5,10 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN || '');
 
 export async function sendTelegramMessage(chatId: string | number, message: string) {
   try {
-    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    await bot.sendMessage(chatId, message, { 
+      parse_mode: 'HTML',
+      disable_web_page_preview: true 
+    });
     return true;
   } catch (error) {
     console.error('Telegram send error:', error);
@@ -14,9 +17,9 @@ export async function sendTelegramMessage(chatId: string | number, message: stri
 }
 
 export async function sendOrderNotification(order: any) {
-  const adminChatId = process.env.TELEGRAM_CHAT_ID;
+  const groupChatId = process.env.TELEGRAM_CHAT_ID;
   
-  if (!adminChatId) {
+  if (!groupChatId) {
     console.log('No TELEGRAM_CHAT_ID configured');
     return false;
   }
@@ -29,60 +32,82 @@ export async function sendOrderNotification(order: any) {
   };
 
   const message = `
-🛍️ <b>New Order Received!</b>
+🚨 <b>NEW ORDER ALERT</b> 🚨
 
-📋 <b>Order #:</b> ${order.orderNumber}
+━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>Order:</b> <code>${order.orderNumber}</code>
 👤 <b>Customer:</b> ${order.customer.name}
-📧 <b>Email:</b> ${order.customer.email}
-📞 <b>Phone:</b> ${order.customer.phone}
-📍 <b>Address:</b> ${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.province}
+📞 <b>Phone:</b> <code>${order.customer.phone}</code>
+━━━━━━━━━━━━━━━━━━━━━
+
+📍 <b>Shipping Address:</b>
+${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.province}
 
 🛒 <b>Items:</b>
-${order.items.map((item: any) => `• ${item.name} x${item.quantity} - ${formatPrice(item.total)}`).join('\n')}
+${order.items.map((item: any) => `├ • ${item.name} x${item.quantity} - ${formatPrice(item.total)}`).join('\n')}
+└─────────────────────
+💰 <b>TOTAL: ${formatPrice(order.total)}</b>
 
-💰 <b>Subtotal:</b> ${formatPrice(order.subtotal)}
-🚚 <b>Shipping:</b> ${formatPrice(order.shippingFee)}
-💳 <b>Total:</b> ${formatPrice(order.total)}
+━━━━━━━━━━━━━━━━━━━━━
+`;
 
-💵 <b>Payment Status:</b> ${order.paymentStatus}
-📦 <b>Order Status:</b> ${order.orderStatus}
+  return sendTelegramMessage(groupChatId, message);
+}
+
+export async function sendOrderConfirmationToUser(order: any, telegramChatId: string) {
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price);
+  };
+
+  const message = `
+✅ <b>Order Confirmed!</b>
+
+Hello <b>${order.customer.name}</b>,
+
+Your order has been successfully confirmed and will be processed soon.
+
+━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>Order:</b> <code>${order.orderNumber}</code>
 📅 <b>Date:</b> ${new Date(order.createdAt).toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━━
+
+🛒 <b>Items:</b>
+${order.items.map((item: any) => `├ • ${item.name} x${item.quantity} - ${formatPrice(item.total)}`).join('\n')}
+└─────────────────────
+💰 <b>TOTAL: ${formatPrice(order.total)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━
+📍 <b>Shipping to:</b>
+${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.province}
+
+Thank you for shopping with Apsara! 🎉
 `;
 
-  return sendTelegramMessage(adminChatId, message);
+  return sendTelegramMessage(telegramChatId, message);
 }
 
-export async function sendUserLoginNotification(user: any) {
-  const adminChatId = process.env.TELEGRAM_CHAT_ID;
-  
-  if (!adminChatId) return false;
+export async function sendOrderStatusUpdateToUser(order: any, telegramChatId: string, oldStatus: string, newStatus: string) {
+  const statusEmoji = {
+    'pending': '⏳',
+    'processing': '🔄',
+    'shipped': '🚚',
+    'delivered': '✅',
+    'cancelled': '❌'
+  };
 
   const message = `
-👤 <b>New User Login/Registration</b>
+🔄 <b>Order Status Update</b>
 
-📧 <b>Email:</b> ${user.email}
-👤 <b>Name:</b> ${user.name}
-📞 <b>Phone:</b> ${user.phone || 'Not provided'}
-📅 <b>Time:</b> ${new Date().toLocaleString()}
+Order <code>${order.orderNumber}</code>
+
+${statusEmoji[oldStatus] || '⚪'} <b>${oldStatus}</b> → ${statusEmoji[newStatus] || '🟢'} <b>${newStatus}</b>
+
+Track your order in your account:
+${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order._id}
 `;
 
-  return sendTelegramMessage(adminChatId, message);
-}
-
-export async function sendLowStockNotification(product: any) {
-  const adminChatId = process.env.TELEGRAM_CHAT_ID;
-  
-  if (!adminChatId) return false;
-
-  const message = `
-⚠️ <b>Low Stock Alert!</b>
-
-📦 <b>Product:</b> ${product.name} / ${product.nameEn}
-📊 <b>Current Stock:</b> ${product.stock}
-🆔 <b>ID:</b> ${product._id}
-
-Please restock soon!
-`;
-
-  return sendTelegramMessage(adminChatId, message);
+  return sendTelegramMessage(telegramChatId, message);
 }

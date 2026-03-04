@@ -1,48 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
+import { auth } from '@/lib/firebase';
+import { signInWithCustomToken } from 'firebase/auth';
 
 declare global {
   interface Window {
-    TelegramLoginWidget: any;
+    onTelegramAuth: (user: any) => void;
   }
 }
 
 export default function TelegramLogin() {
   const { language } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const handleTelegramAuth = (telegramUser: any) => {
-    setLoading(true);
-    
-    // Send to our backend
-    fetch('/api/auth/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(telegramUser),
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        localStorage.setItem('userToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/account');
-      } else {
-        alert(language === 'km' ? 'ចូលប្រើប្រាស់មិនបានជោគជ័យ' : 'Login failed');
-      }
-    })
-    .catch(err => {
-      console.error('Auth error:', err);
-      alert(language === 'km' ? 'មានបញ្ហាក្នុងការចូលប្រើប្រាស់' : 'Login error');
-    })
-    .finally(() => setLoading(false));
-  };
-
-  // Load Telegram widget
+  // Only run on client side
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const handleTelegramAuth = async (telegramUser: any) => {
+      setLoading(true);
+      
+      try {
+        // Send telegram user data to your backend
+        const res = await fetch('/api/auth/telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: telegramUser.id,
+            first_name: telegramUser.first_name,
+            last_name: telegramUser.last_name,
+            username: telegramUser.username,
+            photo_url: telegramUser.photo_url,
+            auth_date: telegramUser.auth_date,
+            hash: telegramUser.hash
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Sign in to Firebase with custom token
+          await signInWithCustomToken(auth, data.firebaseToken);
+          router.push('/account');
+        } else {
+          alert(data.error || 'Telegram login failed');
+        }
+      } catch (error) {
+        console.error('Telegram auth error:', error);
+        alert('Login failed');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Load Telegram widget
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.setAttribute('data-telegram-login', process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '');
@@ -55,20 +75,33 @@ export default function TelegramLogin() {
     
     window.onTelegramAuth = handleTelegramAuth;
     
-    document.getElementById('telegram-login-container')?.appendChild(script);
+    const container = document.getElementById('telegram-login-container');
+    if (container) {
+      container.innerHTML = ''; // Clear previous scripts
+      container.appendChild(script);
+    }
     
     return () => {
       delete window.onTelegramAuth;
+      if (container) {
+        container.innerHTML = '';
+      }
     };
-  }, []);
+  }, [mounted, router]);
+
+  if (!mounted) {
+    return (
+      <div className="w-full h-12 bg-gray-100 rounded-lg animate-pulse"></div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div id="telegram-login-container" className="min-h-[60px]"></div>
+    <div className="w-full">
+      <div id="telegram-login-container" className="flex justify-center"></div>
       {loading && (
-        <div className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 text-center mt-2">
           {language === 'km' ? 'កំពុងដំណើរការ...' : 'Processing...'}
-        </div>
+        </p>
       )}
     </div>
   );

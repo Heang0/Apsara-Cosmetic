@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import TelegramLogin from '@/components/TelegramLogin';
 import { auth } from '@/lib/firebase';
 import { 
   signInWithEmailAndPassword,
@@ -50,7 +51,6 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      // Redirect happens automatically via onAuthStateChanged
     } catch (err: any) {
       console.error('Login error:', err);
       switch (err.code) {
@@ -75,7 +75,6 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // Redirect happens automatically via onAuthStateChanged
     } catch (err: any) {
       console.error('Google login error:', err);
       setError(err.message);
@@ -107,7 +106,6 @@ export default function LoginPage() {
           displayName: formData.name,
         });
       }
-      // Redirect happens automatically via onAuthStateChanged
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message);
@@ -148,7 +146,7 @@ export default function LoginPage() {
       <Layout>
         <div className="min-h-[80vh] flex items-center justify-center px-4">
           <div className="max-w-md w-full bg-white rounded-2xl border border-gray-200 p-8">
-            <h1 className="text-2xl font-bold text-center mb-8">
+            <h1 className="khmer-text text-2xl font-bold text-center mb-8">
               {language === 'km' ? 'កំណត់ពាក្យសម្ងាត់ឡើងវិញ' : 'Reset Password'}
             </h1>
             
@@ -163,12 +161,12 @@ export default function LoginPage() {
                 required
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border rounded-xl"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gray-900 text-white py-3 rounded-xl hover:bg-gray-800"
+                className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition"
               >
                 {loading ? '...' : (language === 'km' ? 'ផ្ញើ' : 'Send')}
               </button>
@@ -191,7 +189,7 @@ export default function LoginPage() {
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl border border-gray-200 p-8">
-            <h1 className="text-2xl font-bold text-center mb-8">
+            <h1 className="khmer-text text-2xl font-bold text-center mb-8">
               {isLogin 
                 ? (language === 'km' ? 'ចូលប្រើប្រាស់' : 'Welcome Back')
                 : (language === 'km' ? 'បង្កើតគណនី' : 'Create Account')
@@ -216,7 +214,7 @@ export default function LoginPage() {
                       required
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                     />
                   </div>
 
@@ -228,7 +226,7 @@ export default function LoginPage() {
                       placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                     />
                   </div>
                 </>
@@ -243,7 +241,7 @@ export default function LoginPage() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                 />
               </div>
 
@@ -256,7 +254,7 @@ export default function LoginPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                 />
               </div>
 
@@ -270,7 +268,7 @@ export default function LoginPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border rounded-xl"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                   />
                 </div>
               )}
@@ -290,7 +288,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gray-900 text-white py-3 rounded-xl hover:bg-gray-800 flex items-center justify-center gap-2"
+                className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2"
               >
                 {loading 
                   ? '...' 
@@ -304,7 +302,7 @@ export default function LoginPage() {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t"></div>
+                <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-400">
@@ -313,10 +311,11 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Google Login Button */}
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full border border-gray-300 py-3 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2"
+              className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2 mb-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -327,6 +326,12 @@ export default function LoginPage() {
               <span>{language === 'km' ? 'ចូលជាមួយ Google' : 'Continue with Google'}</span>
             </button>
 
+            {/* Telegram Login Button */}
+            <div className="mt-3">
+              <TelegramLogin />
+            </div>
+
+            {/* Toggle between login/register */}
             <div className="mt-6 text-center">
               <p className="text-gray-600 text-sm">
                 <span className="text-gray-400">
