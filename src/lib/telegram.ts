@@ -90,7 +90,7 @@ Thank you for shopping with Apsara! 🎉
 }
 
 export async function sendOrderStatusUpdateToUser(order: any, telegramChatId: string, oldStatus: string, newStatus: string) {
-  const statusEmoji = {
+  const statusEmoji: Record<string, string> = {
     'pending': '⏳',
     'processing': '🔄',
     'shipped': '🚚',
