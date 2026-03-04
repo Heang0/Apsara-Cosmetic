@@ -6,8 +6,7 @@ import Layout from '@/components/Layout';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { auth } from '@/lib/firebase';
-import { ShoppingBagIcon, CreditCardIcon, MapPinIcon, PlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ShoppingBagIcon, MapPinIcon, PlusIcon } from '@heroicons/react/24/outline';
 import axios, { AxiosError } from 'axios';
 
 interface CartItem {
@@ -29,6 +28,12 @@ interface Address {
   isDefault: boolean;
 }
 
+interface PaymentCheckResponse {
+  status: 'pending' | 'paid' | 'error';
+  message?: string;
+  retryAfterMs?: number;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { language } = useLanguage();
@@ -36,8 +41,12 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart, validateCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [khqrRaw, setKhqrRaw] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error'>('pending');
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [paymentCheckTick, setPaymentCheckTick] = useState(0);
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -58,6 +67,7 @@ export default function CheckoutPage() {
     province: '',
     isDefault: false,
   });
+  const BAKONG_LOGO_URL = 'https://bakong.nbc.gov.kh/images/favicon.png';
 
   // Load saved addresses
   useEffect(() => {
@@ -100,6 +110,69 @@ export default function CheckoutPage() {
       sessionStorage.setItem('checkoutItems', JSON.stringify(items));
     }
   }, [items, router]);
+
+  useEffect(() => {
+    if (!orderId || !qrCode || paymentStatus === 'paid') {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const checkPayment = async () => {
+      try {
+        const response = await fetch(`/api/bakong/check-payment?orderId=${orderId}`, {
+          cache: 'no-store'
+        });
+        const data: PaymentCheckResponse = await response.json();
+
+        if (data.status === 'paid') {
+          setPaymentStatus('paid');
+          setPaymentMessage(language === 'km'
+            ? 'បានបញ្ជាក់ការបង់ប្រាក់ដោយស្វ័យប្រវត្តិ'
+            : 'Payment confirmed automatically');
+          clearCart();
+          sessionStorage.removeItem('checkoutItems');
+          setTimeout(() => {
+            router.push('/order-confirmation/' + orderId);
+          }, 1200);
+          return;
+        }
+
+        if (data.status === 'error') {
+          setPaymentStatus('error');
+          setPaymentMessage(data.message || 'Payment check failed. Retrying...');
+        } else {
+          setPaymentStatus('pending');
+          setPaymentMessage(data.message || (language === 'km'
+            ? 'កំពុងរង់ចាំការបញ្ជាក់ការបង់ប្រាក់...'
+            : 'Waiting for payment confirmation...'));
+        }
+
+        const nextDelay = Math.max(3000, Number(data.retryAfterMs) || 4000);
+        if (!cancelled) {
+          timeoutId = setTimeout(checkPayment, nextDelay);
+        }
+      } catch (error) {
+        setPaymentStatus('error');
+        setPaymentMessage(language === 'km'
+          ? 'បណ្តាញត្រួតពិនិត្យការបង់ប្រាក់មានបញ្ហា, កំពុងព្យាយាមម្តងទៀត...'
+          : 'Payment verification network issue, retrying...');
+        if (!cancelled) {
+          timeoutId = setTimeout(checkPayment, 7000);
+        }
+      }
+    };
+
+    checkPayment();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [orderId, qrCode, paymentStatus, paymentCheckTick, language, clearCart, router]);
 
   const handleAddressSelect = (addressId: string) => {
     const address = savedAddresses.find(a => a.id === addressId);
@@ -240,12 +313,19 @@ export default function CheckoutPage() {
 
       const qrRes = await axios.post('/api/bakong/create-qr', {
         amount: total,
-        orderId: order.orderNumber,
+        orderId: order._id,
+        orderNumber: order.orderNumber,
         customerName: formData.name,
       });
 
       if (qrRes.data.qrCode) {
         setQrCode(qrRes.data.qrCode);
+        setKhqrRaw(qrRes.data.khqr || null);
+        setPaymentStatus('pending');
+        setPaymentMessage(language === 'km'
+          ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់ស្វ័យប្រវត្តិ'
+          : 'Please scan the QR and wait for automatic confirmation');
+        setLoading(false);
       } else {
         throw new Error('No QR code in response');
       }
@@ -269,12 +349,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const handlePaymentComplete = () => {
-    clearCart();
-    sessionStorage.removeItem('checkoutItems');
-    router.push('/order-confirmation/' + orderId);
-  };
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -288,30 +362,52 @@ export default function CheckoutPage() {
       <Layout>
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
-            <h1 className="khmer-text text-2xl font-bold mb-4">
+            <h1 className={language === 'km' ? 'khmer-text text-2xl font-bold mb-4' : 'english-text text-2xl font-bold mb-4'}>
               {language === 'km' ? 'ស្កេន QR ដើម្បីបង់ប្រាក់' : 'Scan QR to Pay'}
             </h1>
-            <div className="bg-gray-50 p-4 rounded-lg inline-block mb-6">
-              <img 
-                src={qrCode} 
-                alt="Bakong QR" 
-                className="w-64 h-64 mx-auto"
-              />
+            <div className="bg-gray-50 p-4 rounded-lg inline-block mb-4">
+              <div className="relative w-64 h-64 mx-auto">
+                <img
+                  src={qrCode}
+                  alt="Bakong QR"
+                  className="w-64 h-64 mx-auto"
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-12 h-12 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center">
+                    <img src={BAKONG_LOGO_URL} alt="Bakong" className="w-8 h-8 rounded-full" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className={`text-sm text-gray-500 mb-1 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
               {language === 'km' ? 'ចំនួនទឹកប្រាក់:' : 'Amount:'} {formatPrice(total)}
             </p>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className={`text-sm text-gray-500 mb-2 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
               {language === 'km' ? 'លេខកុម្ម៉ង់:' : 'Order ID:'} {orderNumber}
             </p>
-            <button
-              onClick={handlePaymentComplete}
-              className="bg-gray-900 text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition"
-            >
-              <span className={language === 'km' ? 'khmer-text' : 'english-text'}>
-                {language === 'km' ? 'បញ្ជាក់ការបង់ប្រាក់' : 'Confirm Payment'}
+            <div className="inline-flex items-center gap-2 py-2 px-4 rounded-full bg-blue-50 border border-blue-100 mb-3">
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+              <span className={`text-sm text-blue-700 font-medium ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
+                {paymentStatus === 'paid'
+                  ? (language === 'km' ? 'បានបង់ប្រាក់រួចរាល់' : 'Paid')
+                  : (language === 'km' ? 'កំពុងរង់ចាំការបញ្ជាក់...' : 'Waiting for confirmation...')}
               </span>
+            </div>
+            {paymentMessage && (
+              <p className={`text-xs text-gray-500 mb-3 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{paymentMessage}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setPaymentCheckTick((prev) => prev + 1)}
+              className={`text-xs px-4 py-2 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition ${language === 'km' ? 'khmer-text' : 'english-text'}`}
+            >
+              {language === 'km' ? 'ខ្ញុំបានបង់ហើយ ពិនិត្យឥឡូវ' : 'I already paid, check now'}
             </button>
+            {khqrRaw && (
+              <p className="text-[11px] text-gray-400 mt-3 break-all">
+                KHQR Ref: {khqrRaw.slice(0, 36)}...
+              </p>
+            )}
           </div>
         </div>
       </Layout>
@@ -624,3 +720,4 @@ export default function CheckoutPage() {
     </Layout>
   );
 }
+

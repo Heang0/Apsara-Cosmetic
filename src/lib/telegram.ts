@@ -111,3 +111,28 @@ ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order._id}
 
   return sendTelegramMessage(telegramChatId, message);
 }
+
+export async function sendLowStockNotification(product: any) {
+  const groupChatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!groupChatId) {
+    console.log('No TELEGRAM_CHAT_ID configured');
+    return false;
+  }
+
+  const productName = product?.name || product?.title || 'Unknown product';
+  const sku = product?.sku ? `\nSKU: ${product.sku}` : '';
+  const stock = Number(product?.stock ?? 0);
+  const safeStock = Number.isFinite(stock) ? stock : 0;
+
+  const message = [
+    '<b>LOW STOCK ALERT</b>',
+    '',
+    `Product: <b>${productName}</b>`,
+    `Remaining stock: <b>${safeStock}</b>${sku}`,
+    '',
+    'Please restock this item soon.'
+  ].join('\n');
+
+  return sendTelegramMessage(groupChatId, message);
+}

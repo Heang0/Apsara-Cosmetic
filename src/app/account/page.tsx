@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
+import axios, { AxiosError } from 'axios';
 import { 
   UserIcon, 
   ShoppingBagIcon, 
@@ -32,6 +33,8 @@ interface Order {
   total: number;
   orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed';
+  canPayNow?: boolean;
+  payUntil?: string | null;
   items: Array<{
     name: string;
     nameEn: string;
@@ -70,6 +73,14 @@ export default function AccountPage() {
     province: '',
     isDefault: false,
   });
+  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
+  const [paymentQrCode, setPaymentQrCode] = useState<string | null>(null);
+  const [paymentKhqr, setPaymentKhqr] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error'>('pending');
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [paymentCheckTick, setPaymentCheckTick] = useState(0);
+  const BAKONG_LOGO_URL = 'https://bakong.nbc.gov.kh/images/favicon.png';
 
   useEffect(() => {
     if (!user) {
@@ -79,6 +90,63 @@ export default function AccountPage() {
     fetchOrders();
     fetchAddresses();
   }, [user]);
+
+  useEffect(() => {
+    if (!paymentOrder || !paymentQrCode || paymentStatus === 'paid') {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const checkPayment = async () => {
+      try {
+        const response = await fetch(`/api/bakong/check-payment?orderId=${paymentOrder._id}`, {
+          cache: 'no-store'
+        });
+        const data = await response.json();
+
+        if (data.status === 'paid') {
+          setPaymentStatus('paid');
+          setPaymentMessage(language === 'km'
+            ? 'បានទូទាត់ជោគជ័យ'
+            : 'Payment confirmed');
+          await fetchOrders();
+          if (selectedOrder?._id === paymentOrder._id) {
+            setSelectedOrder((prev) => prev ? { ...prev, paymentStatus: 'paid', canPayNow: false } : prev);
+          }
+          return;
+        }
+
+        setPaymentStatus(data.status === 'error' ? 'error' : 'pending');
+        setPaymentMessage(data.message || (language === 'km'
+          ? 'កំពុងរង់ចាំការបញ្ជាក់...'
+          : 'Waiting for payment confirmation...'));
+
+        const retryAfterMs = Math.max(3000, Number(data.retryAfterMs) || 4000);
+        if (!cancelled) {
+          timeoutId = setTimeout(checkPayment, retryAfterMs);
+        }
+      } catch (error) {
+        setPaymentStatus('error');
+        setPaymentMessage(language === 'km'
+          ? 'បញ្ហាបណ្តាញ។ កំពុងព្យាយាមម្តងទៀត...'
+          : 'Network issue. Retrying...');
+        if (!cancelled) {
+          timeoutId = setTimeout(checkPayment, 7000);
+        }
+      }
+    };
+
+    checkPayment();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [paymentOrder, paymentQrCode, paymentStatus, paymentCheckTick, selectedOrder?._id, language]);
 
   const fetchOrders = async () => {
     try {
@@ -93,7 +161,7 @@ export default function AccountPage() {
         },
       });
       const data = await res.json();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -106,6 +174,55 @@ export default function AccountPage() {
     const savedAddresses = localStorage.getItem('userAddresses');
     if (savedAddresses) {
       setAddresses(JSON.parse(savedAddresses));
+    }
+  };
+
+  const closePaymentModal = () => {
+    setPaymentOrder(null);
+    setPaymentQrCode(null);
+    setPaymentKhqr(null);
+    setPaymentMessage('');
+    setPaymentStatus('pending');
+  };
+
+  const handlePayNow = async (order: Order, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+
+    if (!order.canPayNow) {
+      return;
+    }
+
+    try {
+      setCreatingPayment(true);
+      setPaymentMessage('');
+      setPaymentStatus('pending');
+
+      const qrRes = await axios.post('/api/bakong/create-qr', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        amount: order.total
+      });
+
+      if (!qrRes.data?.qrCode) {
+        throw new Error('No QR code in response');
+      }
+
+      setPaymentOrder(order);
+      setPaymentQrCode(qrRes.data.qrCode);
+      setPaymentKhqr(qrRes.data.khqr || null);
+      setPaymentCheckTick((prev) => prev + 1);
+      setPaymentMessage(language === 'km'
+        ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់'
+        : 'Please scan the QR and wait for confirmation');
+    } catch (error) {
+      const message = error instanceof AxiosError
+        ? (error.response?.data?.error || error.message)
+        : (error instanceof Error ? error.message : 'Failed to generate payment QR');
+      alert(language === 'km'
+        ? `បង្កើត QR មិនបាន: ${message}`
+        : `Unable to generate payment QR: ${message}`);
+    } finally {
+      setCreatingPayment(false);
     }
   };
 
@@ -351,10 +468,10 @@ export default function AccountPage() {
               ) : orders.length > 0 ? (
                 <div className="space-y-3">
                   {orders.map((order) => (
-                    <button
+                    <div
                       key={order._id}
                       onClick={() => setSelectedOrder(order)}
-                      className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition group"
+                      className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition group cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium text-gray-900">{order.orderNumber}</p>
@@ -366,7 +483,22 @@ export default function AccountPage() {
                         <p className="text-gray-500">{formatDate(order.createdAt)}</p>
                         <p className="english-text font-medium">{formatPrice(order.total)}</p>
                       </div>
-                    </button>
+                      {order.canPayNow && (
+                        <div className="mt-3 flex items-center justify-between">
+                          <p className={`text-xs text-gray-400 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
+                            {language === 'km' ? 'ទូទាត់បានក្នុង 1 ថ្ងៃ' : 'Pay within 1 day'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(event) => handlePayNow(order, event)}
+                            disabled={creatingPayment}
+                            className={`text-xs px-3 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed ${language === 'km' ? 'khmer-text' : 'english-text'}`}
+                          >
+                            {creatingPayment ? (language === 'km' ? 'កំពុងបង្កើត...' : 'Preparing...') : (language === 'km' ? 'បង់ឥឡូវ' : 'Pay now')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -723,7 +855,86 @@ export default function AccountPage() {
                   <span className="khmer-text">{language === 'km' ? 'សរុប' : 'Total'}</span>
                   <span className="english-text">{formatPrice(selectedOrder.total)}</span>
                 </div>
+
+                <div className="pt-3 border-t space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm text-gray-500 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
+                      {language === 'km' ? 'ការទូទាត់' : 'Payment'}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      selectedOrder.paymentStatus === 'paid'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {selectedOrder.paymentStatus}
+                    </span>
+                  </div>
+
+                  {selectedOrder.canPayNow && selectedOrder.paymentStatus !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={(event) => handlePayNow(selectedOrder, event)}
+                      disabled={creatingPayment}
+                      className={`w-full py-2.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed ${language === 'km' ? 'khmer-text' : 'english-text'}`}
+                    >
+                      {creatingPayment ? (language === 'km' ? 'កំពុងបង្កើត QR...' : 'Generating QR...') : (language === 'km' ? 'បង់ឥឡូវ' : 'Pay now')}
+                    </button>
+                  )}
+                </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {paymentOrder && paymentQrCode && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/30" onClick={closePaymentModal} />
+            <div className="relative bg-white rounded-lg max-w-sm w-full p-5 text-center">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className={`font-medium text-gray-900 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{language === 'km' ? 'បង់ប្រាក់' : 'Payment'}</h3>
+                <button onClick={closePaymentModal} className="p-1 hover:bg-gray-100 rounded">
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className={`text-sm text-gray-500 mb-3 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{paymentOrder.orderNumber}</p>
+
+              <div className="relative w-64 h-64 mx-auto mb-3">
+                <img src={paymentQrCode} alt="Bakong QR" className="w-64 h-64" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-12 h-12 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center">
+                    <img src={BAKONG_LOGO_URL} alt="Bakong" className="w-8 h-8 rounded-full" />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-1">{formatPrice(paymentOrder.total)}</p>
+              {paymentMessage && (
+                <p className={`text-xs text-gray-500 mb-3 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{paymentMessage}</p>
+              )}
+
+              <div className="inline-flex items-center gap-2 py-1.5 px-3 rounded-full bg-blue-50 border border-blue-100 mb-3">
+                <div className="w-3 h-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                <span className={`text-xs text-blue-700 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>
+                  {paymentStatus === 'paid'
+                    ? (language === 'km' ? 'បានបង់ប្រាក់រួចរាល់' : 'Paid')
+                    : (language === 'km' ? 'កំពុងពិនិត្យការទូទាត់...' : 'Checking payment...')}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPaymentCheckTick((prev) => prev + 1)}
+                className={`w-full py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm ${language === 'km' ? 'khmer-text' : 'english-text'}`}
+              >
+                {language === 'km' ? 'ខ្ញុំបានបង់ហើយ ពិនិត្យឥឡូវ' : 'I already paid, check now'}
+              </button>
+
+              {paymentKhqr && (
+                <p className="text-[10px] text-gray-400 mt-3 break-all">
+                  KHQR Ref: {paymentKhqr.slice(0, 32)}...
+                </p>
+              )}
             </div>
           </div>
         )}

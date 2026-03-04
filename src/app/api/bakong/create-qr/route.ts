@@ -1,72 +1,118 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import connectDB from '@/lib/mongodb';
+import Order from '@/models/Order';
 
-// Simple QR code generator using QR Server API as fallback
-function generateQRCode(data: string): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
-}
+const cleanEnvValue = (value?: string) => {
+  if (!value) return '';
+  return String(value).trim().replace(/^['"]|['"]$/g, '');
+};
+
+const buildQrImageUrl = (khqrString: string) => {
+  return [
+    'https://quickchart.io/qr',
+    '?size=320',
+    '&ecLevel=M',
+    '&margin=2',
+    `&text=${encodeURIComponent(khqrString)}`
+  ].join('');
+};
 
 export async function POST(request: Request) {
   try {
-    const { amount, orderId, customerName } = await request.json();
+    const body = await request.json();
 
-    // Get Bakong credentials from env
-    const bakongAccountId = process.env.BAKONG_ACCOUNT_ID;
-    const merchantName = process.env.BAKONG_MERCHANT_NAME || 'Apsara';
-    const storeLabel = process.env.BAKONG_STORE_LABEL || 'SITE-A';
-
-    if (!bakongAccountId) {
+    const amount = Number(body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: 'Bakong account ID not configured' },
+        { error: 'Invalid amount' },
+        { status: 400 }
+      );
+    }
+
+    const orderIdRaw = String(body?.orderId || '').trim();
+    const orderId = orderIdRaw || '';
+    const orderNumberRaw = String(body?.orderNumber || body?.billNumber || '').trim();
+    const billNumber = (orderNumberRaw || orderIdRaw || `ORDER-${Date.now()}`).slice(0, 25);
+
+    const bakongAccountId = cleanEnvValue(process.env.BAKONG_ACCOUNT_ID);
+    const merchantName = cleanEnvValue(process.env.BAKONG_MERCHANT_NAME);
+    const merchantCity = cleanEnvValue(process.env.BAKONG_MERCHANT_CITY || 'Phnom Penh');
+    const storeLabel = cleanEnvValue(process.env.BAKONG_STORE_LABEL || 'SITE-A');
+    const terminalLabel = cleanEnvValue(process.env.BAKONG_TERMINAL_LABEL || 'WEB-A');
+    const currency = cleanEnvValue(process.env.BAKONG_CURRENCY || 'USD').toUpperCase();
+    const exchangeRate = Number(process.env.BAKONG_EXCHANGE_RATE || 4100);
+    const isUSD = currency !== 'KHR';
+
+    if (!bakongAccountId || !merchantName) {
+      return NextResponse.json(
+        { error: 'Missing BAKONG_ACCOUNT_ID or BAKONG_MERCHANT_NAME in environment' },
         { status: 500 }
       );
     }
 
-    // Create payment data in Bakong format
-    const paymentData = {
-      type: 'bakong',
-      accountId: bakongAccountId,
-      merchantName: merchantName,
-      storeLabel: storeLabel,
-      amount: amount,
-      currency: 'USD',
-      orderId: orderId,  // Fixed: using the variable from request
-      customerName: customerName,
-      timestamp: Date.now(),
-      description: `Payment for order ${orderId}`
+    const { BakongKHQR, IndividualInfo, khqrData } = await import('bakong-khqr');
+    const khqr = new BakongKHQR();
+
+    const khqrAmount = isUSD
+      ? Number(amount.toFixed(2))
+      : Math.round(amount * exchangeRate);
+    const expiresAtMs = Date.now() + (15 * 60 * 1000);
+
+    const optionalData = {
+      currency: isUSD ? khqrData.currency.usd : khqrData.currency.khr,
+      amount: khqrAmount,
+      billNumber,
+      storeLabel,
+      terminalLabel,
+      expirationTimestamp: expiresAtMs
     };
 
-    // Convert to JSON string for QR code
-    const jsonString = JSON.stringify(paymentData);
-    
-    // Generate QR code using QR Server API
-    const qrCodeUrl = generateQRCode(jsonString);
+    const individualInfo = new IndividualInfo(
+      bakongAccountId,
+      merchantName,
+      merchantCity,
+      optionalData
+    );
+
+    const khqrResponse = khqr.generateIndividual(individualInfo);
+    const statusCode = khqrResponse?.status?.code;
+
+    if (statusCode !== 0 || !khqrResponse?.data?.qr || !khqrResponse?.data?.md5) {
+      return NextResponse.json(
+        { error: khqrResponse?.status?.message || 'Failed to generate KHQR' },
+        { status: 502 }
+      );
+    }
+
+    const khqrString = khqrResponse.data.qr;
+    const md5 = khqrResponse.data.md5;
+
+    // Persist MD5 reference for dynamic payment-status checks.
+    if (orderId && mongoose.Types.ObjectId.isValid(orderId)) {
+      await connectDB();
+      await Order.findByIdAndUpdate(orderId, {
+        bakongTransactionId: md5,
+        bakongQrCode: khqrString
+      });
+    }
 
     return NextResponse.json({
-      qrCode: qrCodeUrl,
-      amount: amount,
-      orderId: orderId,  // Fixed: using the variable from request
+      qrCode: buildQrImageUrl(khqrString),
+      khqr: khqrString,
+      md5,
+      amountUSD: Number(amount.toFixed(2)),
+      amountKHR: isUSD ? null : khqrAmount,
+      currency: isUSD ? 'USD' : 'KHR',
+      orderId,
+      expiresAt: new Date(expiresAtMs).toISOString()
     });
-
   } catch (error) {
-    console.error('Bakong QR generation error:', error);
-    
-    // Fallback: Generate a simple QR with order info
-    const { amount, orderId } = await request.json(); // Added this line to get variables in catch block
-    
-    const fallbackData = {
-      message: 'Payment QR',
-      orderId: orderId,
-      amount: amount,
-      account: process.env.BAKONG_ACCOUNT_ID
-    };
-    
-    const fallbackQR = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(JSON.stringify(fallbackData))}`;
-    
-    return NextResponse.json({
-      qrCode: fallbackQR,
-      amount: amount,
-      orderId: orderId,
-      note: 'Using fallback QR generator'
-    });
+    console.error('Bakong KHQR generation error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to generate Bakong KHQR';
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
   }
 }

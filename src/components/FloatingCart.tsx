@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingBagIcon, XMarkIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function FloatingCart() {
+  const router = useRouter();
   const { items, removeFromCart, updateQuantity, totalItems, totalPrice } = useCart();
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -164,10 +166,12 @@ export default function FloatingCart() {
                       <span className={language === 'km' ? 'khmer-text' : 'english-text'}>{viewCartText}</span>
                     </Link>
                     <button 
+                      type="button"
                       className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition cursor-pointer z-[103]" /* Added cursor-pointer and higher z-index */
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.location.href = '/checkout';
+                        setIsOpen(false);
+                        router.push('/checkout');
                       }}
                     >
                       <span className={language === 'km' ? 'khmer-text' : 'english-text'}>{checkoutText}</span>

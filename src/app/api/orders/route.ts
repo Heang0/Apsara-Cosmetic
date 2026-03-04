@@ -10,16 +10,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     await connectDB();
-    
+
     if (id) {
       const order = await Order.findById(id);
       if (!order) {
-        return NextResponse.json(
-          { error: 'Order not found' },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
       return NextResponse.json(order);
     }
@@ -30,7 +27,7 @@ export async function GET(request: Request) {
     console.error('GET orders error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { error: 'Failed to fetch orders: ' + errorMessage },
+      { error: `Failed to fetch orders: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -42,55 +39,64 @@ export async function POST(request: Request) {
     const body = await request.json();
     await connectDB();
 
-    // Update product stock
-    for (const item of body.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.quantity }
-      });
+    // Update product stock in one batch to reduce checkout latency.
+    const stockOps = (body.items || []).map((item: any) => ({
+      updateOne: {
+        filter: { _id: item.product },
+        update: { $inc: { stock: -Number(item.quantity || 0) } }
+      }
+    }));
+
+    if (stockOps.length > 0) {
+      await Product.bulkWrite(stockOps);
     }
 
     const order = await Order.create({
       ...body,
       orderStatus: 'pending',
-      paymentStatus: 'pending',
+      paymentStatus: 'pending'
     });
 
-    // Send Telegram notifications
-    try {
-      await sendOrderNotification(order);
-      
-      // Check for low stock products
-      for (const item of body.items) {
-        const product = await Product.findById(item.product);
-        if (product && product.stock < 5) {
-          await sendLowStockNotification(product);
-        }
-      }
-    } catch (telegramError) {
-      console.error('Telegram notification error:', telegramError);
-      // Don't fail the order if telegram fails
-    }
+    // Send notifications asynchronously so order response returns faster.
+    void (async () => {
+      try {
+        await sendOrderNotification(order);
 
-    // Send email receipts
-    try {
-      // Send receipt to customer
-      await sendOrderReceipt(order, order.customer.email);
-      
-      // Send notification to admin
-      await sendAdminNotification(order);
-      
-      console.log('✅ Emails sent successfully for order:', order.orderNumber);
-    } catch (emailError) {
-      console.error('❌ Failed to send emails:', emailError);
-      // Don't fail the order if email fails
-    }
+        const productIds = (body.items || []).map((item: any) => item.product);
+        if (productIds.length === 0) {
+          return;
+        }
+
+        const lowStockProducts = await Product.find({
+          _id: { $in: productIds },
+          stock: { $lt: 5 }
+        });
+
+        await Promise.all(
+          lowStockProducts.map((product: any) => sendLowStockNotification(product))
+        );
+      } catch (telegramError) {
+        console.error('Telegram notification error:', telegramError);
+      }
+    })();
+
+    void (async () => {
+      try {
+        await Promise.all([
+          sendOrderReceipt(order, order.customer.email),
+          sendAdminNotification(order)
+        ]);
+      } catch (emailError) {
+        console.error('Failed to send emails:', emailError);
+      }
+    })();
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
     console.error('POST order error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { error: 'Failed to create order: ' + errorMessage },
+      { error: `Failed to create order: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -104,7 +110,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
 
     await connectDB();
-    
+
     const order = await Order.findByIdAndUpdate(
       id,
       { ...body, updatedAt: new Date() },
@@ -112,10 +118,7 @@ export async function PUT(request: Request) {
     );
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
     return NextResponse.json(order);
@@ -123,7 +126,7 @@ export async function PUT(request: Request) {
     console.error('PUT order error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { error: 'Failed to update order: ' + errorMessage },
+      { error: `Failed to update order: ${errorMessage}` },
       { status: 500 }
     );
   }
