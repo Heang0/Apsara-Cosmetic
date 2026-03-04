@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { getFirebaseAuth } from '@/lib/firebase';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithCustomToken, updateProfile } from 'firebase/auth';
 
 declare global {
   interface Window {
@@ -49,8 +49,21 @@ export default function TelegramLogin() {
           if (telegramUser.id) {
             localStorage.setItem('telegramChatId', String(telegramUser.id));
           }
+          if (data.user) {
+            localStorage.setItem('telegramUserProfile', JSON.stringify({
+              name: data.user.name || '',
+              email: data.user.email || '',
+              photoURL: data.user.photoURL || '',
+            }));
+          }
           const firebaseAuth = getFirebaseAuth();
-          await signInWithCustomToken(firebaseAuth, data.firebaseToken);
+          const credential = await signInWithCustomToken(firebaseAuth, data.firebaseToken);
+          if (data.user?.name || data.user?.photoURL) {
+            await updateProfile(credential.user, {
+              displayName: data.user?.name || credential.user.displayName,
+              photoURL: data.user?.photoURL || credential.user.photoURL,
+            });
+          }
           router.push('/account');
         } else {
           alert(data.error || 'Telegram login failed');
