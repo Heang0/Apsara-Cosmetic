@@ -543,7 +543,9 @@ export default function AccountPage() {
                     {language === 'km' ? 'សមាជិកតាំងពី' : 'Member since'}
                   </p>
                   <p className="khmer-text text-gray-900">
-                    {user.metadata?.createdAt ? formatDate(user.metadata.createdAt) : 'N/A'}
+                    {auth.currentUser?.metadata?.creationTime
+                      ? formatDate(auth.currentUser.metadata.creationTime)
+                      : 'N/A'}
                   </p>
                 </div>
               </div>

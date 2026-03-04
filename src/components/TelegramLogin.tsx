@@ -8,7 +8,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 
 declare global {
   interface Window {
-    onTelegramAuth: (user: any) => void;
+    onTelegramAuth?: (user: any) => void;
   }
 }
 
