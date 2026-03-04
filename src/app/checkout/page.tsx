@@ -80,7 +80,7 @@ export default function CheckoutPage() {
     if (savedAddresses) {
       const addresses = JSON.parse(savedAddresses);
       setSavedAddresses(addresses);
-      
+
       // Select default address if exists
       const defaultAddress = addresses.find((a: Address) => a.isDefault);
       if (defaultAddress) {
@@ -101,11 +101,11 @@ export default function CheckoutPage() {
   useEffect(() => {
     const hasItems = items.length > 0;
     const sessionItems = sessionStorage.getItem('checkoutItems');
-    
+
     if (!hasItems && !sessionItems) {
       router.push('/products');
     }
-    
+
     if (hasItems) {
       sessionStorage.setItem('checkoutItems', JSON.stringify(items));
     }
@@ -192,14 +192,14 @@ export default function CheckoutPage() {
 
   const handleAddNewAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newAddressObj: Address = {
       id: Date.now().toString(),
       ...newAddress,
     };
 
     let updatedAddresses = [...savedAddresses, newAddressObj];
-    
+
     if (newAddress.isDefault || savedAddresses.length === 0) {
       updatedAddresses = updatedAddresses.map(addr => ({
         ...addr,
@@ -219,7 +219,7 @@ export default function CheckoutPage() {
       province: newAddressObj.province,
       notes: formData.notes,
     });
-    
+
     setShowAddressForm(false);
     setNewAddress({
       name: '',
@@ -267,7 +267,7 @@ export default function CheckoutPage() {
       await validateCart();
 
       const currentItems: CartItem[] = items.length > 0 ? items : JSON.parse(sessionStorage.getItem('checkoutItems') || '[]');
-      
+
       const orderNumber = generateOrderNumber();
       const orderData = {
         orderNumber,
@@ -294,6 +294,8 @@ export default function CheckoutPage() {
         shippingFee,
         total,
         notes: formData.notes,
+        // Attach telegramChatId so the backend can send payment confirmation via Telegram
+        telegramChatId: typeof window !== 'undefined' ? (localStorage.getItem('telegramChatId') || undefined) : undefined,
       };
 
       const orderRes = await fetch('/api/orders', {
@@ -332,19 +334,19 @@ export default function CheckoutPage() {
 
     } catch (error) {
       console.error('Checkout error:', error);
-      
+
       let errorMessage = 'Unknown error occurred';
-      
+
       if (error instanceof AxiosError) {
         errorMessage = error.response?.data?.error || error.message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
-      alert(language === 'km' 
+
+      alert(language === 'km'
         ? 'មានបញ្ហាក្នុងការកុម្ម៉ង់: ' + errorMessage
         : 'Checkout failed: ' + errorMessage);
-      
+
       setLoading(false);
     }
   };
@@ -433,16 +435,15 @@ export default function CheckoutPage() {
                     {language === 'km' ? 'អាសយដ្ឋានរបស់ខ្ញុំ' : 'My Addresses'}
                   </h2>
                 </div>
-                
+
                 <div className="space-y-3">
                   {savedAddresses.map((address) => (
                     <label
                       key={address.id}
-                      className={`block p-4 border rounded-lg cursor-pointer transition ${
-                        selectedAddressId === address.id
-                          ? 'border-gray-900 bg-gray-50'
-                          : 'border-gray-200 hover:border-gray-400'
-                      }`}
+                      className={`block p-4 border rounded-lg cursor-pointer transition ${selectedAddressId === address.id
+                        ? 'border-gray-900 bg-gray-50'
+                        : 'border-gray-200 hover:border-gray-400'
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         <input
@@ -507,44 +508,44 @@ export default function CheckoutPage() {
                     type="text"
                     placeholder={language === 'km' ? 'ឈ្មោះអ្នកទទួល' : 'Recipient Name'}
                     value={newAddress.name}
-                    onChange={(e) => setNewAddress({...newAddress, name: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <input
                     type="tel"
                     placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
                     value={newAddress.phone}
-                    onChange={(e) => setNewAddress({...newAddress, phone: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <input
                     type="text"
                     placeholder={language === 'km' ? 'អាសយដ្ឋានលម្អិត' : 'Street Address'}
                     value={newAddress.street}
-                    onChange={(e) => setNewAddress({...newAddress, street: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       type="text"
                       placeholder={language === 'km' ? 'ទីក្រុង' : 'City'}
                       value={newAddress.city}
-                      onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                     <input
                       type="text"
                       placeholder={language === 'km' ? 'ខេត្ត' : 'Province'}
                       value={newAddress.province}
-                      onChange={(e) => setNewAddress({...newAddress, province: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      onChange={(e) => setNewAddress({ ...newAddress, province: e.target.value })}
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                   </div>
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={newAddress.isDefault}
-                      onChange={(e) => setNewAddress({...newAddress, isDefault: e.target.checked})}
+                      onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
                       className="w-4 h-4 border-gray-300 rounded"
                     />
                     <span className="khmer-text text-sm text-gray-600">
@@ -579,7 +580,7 @@ export default function CheckoutPage() {
                     required
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <input
                     type="email"
@@ -597,7 +598,7 @@ export default function CheckoutPage() {
                     required
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <input
                     type="text"
@@ -606,7 +607,7 @@ export default function CheckoutPage() {
                     required
                     value={formData.street}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <input
@@ -616,7 +617,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.city}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                     <input
                       type="text"
@@ -625,7 +626,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.province}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                   </div>
                   <textarea
@@ -634,7 +635,7 @@ export default function CheckoutPage() {
                     rows={3}
                     value={formData.notes}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                 </div>
               </div>
@@ -647,13 +648,13 @@ export default function CheckoutPage() {
               <h2 className="khmer-text text-lg font-medium mb-4">
                 {language === 'km' ? 'សង្ខេបការបញ្ជាទិញ' : 'Order Summary'}
               </h2>
-              
+
               <div className="space-y-4 mb-4 max-h-96 overflow-auto">
                 {items.map((item: CartItem) => (
                   <div key={item._id} className="flex gap-3">
                     <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {item.image ? (
-                        <img 
+                        <img
                           src={getOptimizedImage(item.image, 100)}
                           alt={language === 'km' ? item.name : item.nameEn}
                           className="w-full h-full object-cover"
@@ -664,7 +665,7 @@ export default function CheckoutPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex-1">
                       <p className={'text-sm font-medium text-gray-900 ' + (language === 'km' ? 'khmer-text' : 'english-text')}>
                         {language === 'km' ? item.name : item.nameEn}
@@ -673,7 +674,7 @@ export default function CheckoutPage() {
                         {item.quantity} x {formatPrice(item.price)}
                       </p>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="english-text text-sm font-medium">
                         {formatPrice(item.price * item.quantity)}

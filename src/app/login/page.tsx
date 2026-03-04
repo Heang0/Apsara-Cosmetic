@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import TelegramLogin from '@/components/TelegramLogin';
 import { getFirebaseAuth } from '@/lib/firebase';
-import { 
+import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    let unsubscribe = () => {};
+    let unsubscribe = () => { };
     try {
       const firebaseAuth = getFirebaseAuth();
       unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
@@ -133,8 +133,8 @@ export default function LoginPage() {
       const firebaseAuth = getFirebaseAuth();
       await sendPasswordResetEmail(firebaseAuth, formData.email);
       setSuccess(
-        language === 'km' 
-          ? 'សូមពិនិត្យមើលអ៊ីមែលរបស់អ្នក' 
+        language === 'km'
+          ? 'សូមពិនិត្យមើលអ៊ីមែលរបស់អ្នក'
           : 'Check your email for password reset link'
       );
     } catch (err: any) {
@@ -159,7 +159,7 @@ export default function LoginPage() {
             <h1 className="khmer-text text-2xl font-bold text-center mb-8">
               {language === 'km' ? 'កំណត់ពាក្យសម្ងាត់ឡើងវិញ' : 'Reset Password'}
             </h1>
-            
+
             {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg">{error}</div>}
             {success && <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-lg">{success}</div>}
 
@@ -200,7 +200,7 @@ export default function LoginPage() {
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl border border-gray-200 p-8">
             <h1 className="khmer-text text-2xl font-bold text-center mb-8">
-              {isLogin 
+              {isLogin
                 ? (language === 'km' ? 'ចូលប្រើប្រាស់' : 'Welcome Back')
                 : (language === 'km' ? 'បង្កើតគណនី' : 'Create Account')
               }
@@ -224,7 +224,7 @@ export default function LoginPage() {
                       required
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                   </div>
 
@@ -236,7 +236,7 @@ export default function LoginPage() {
                       placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                      className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                     />
                   </div>
                 </>
@@ -264,7 +264,7 @@ export default function LoginPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                 />
               </div>
 
@@ -278,7 +278,7 @@ export default function LoginPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                    className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                   />
                 </div>
               )}
@@ -298,11 +298,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2"
+                className={`w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2 ${language === 'km' ? 'khmer-text' : ''}`}
               >
-                {loading 
-                  ? '...' 
-                  : isLogin 
+                {loading
+                  ? '...'
+                  : isLogin
                     ? (language === 'km' ? 'ចូល' : 'Sign In')
                     : (language === 'km' ? 'ចុះឈ្មោះ' : 'Sign Up')
                 }
@@ -333,7 +333,7 @@ export default function LoginPage() {
                 <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
-              <span>{language === 'km' ? 'ចូលជាមួយ Google' : 'Continue with Google'}</span>
+              <span className={language === 'km' ? 'khmer-text' : ''}>{language === 'km' ? 'ចូលជាមួយ Google' : 'Continue with Google'}</span>
             </button>
 
             {/* Telegram Login Button */}
@@ -343,7 +343,7 @@ export default function LoginPage() {
 
             {/* Toggle between login/register */}
             <div className="mt-6 text-center">
-              <p className="text-gray-600 text-sm">
+              <p className={`text-gray-600 text-sm ${language === 'km' ? 'khmer-text' : ''}`}>
                 <span className="text-gray-400">
                   {isLogin
                     ? (language === 'km' ? 'មិនទាន់មានគណនី?' : 'New here?')

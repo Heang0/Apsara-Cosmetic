@@ -4,9 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
-import { 
-  PhoneIcon, 
-  EnvelopeIcon, 
+import {
+  PhoneIcon,
+  EnvelopeIcon,
   MapPinIcon,
   ClockIcon,
   PaperAirplaneIcon,
@@ -40,7 +40,7 @@ export default function ContactPage() {
         subject: '',
         message: '',
       });
-      
+
       // Reset success message after 5 seconds
       setTimeout(() => setSuccess(false), 5000);
     }, 1000);
@@ -111,7 +111,7 @@ export default function ContactPage() {
           <h1 className="khmer-text text-4xl sm:text-5xl font-light text-gray-900 mb-4">
             {title}
           </h1>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          <p className={`text-xl text-gray-500 max-w-2xl mx-auto ${language === 'km' ? 'khmer-text' : ''}`}>
             {subtitle}
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function ContactPage() {
                   {language === 'km' ? info.titleKm : info.titleEn}
                 </h3>
                 {info.details.map((detail, i) => (
-                  <p key={i} className="text-sm text-gray-500">
+                  <p key={i} className={`text-sm text-gray-500 ${language === 'km' ? 'khmer-text' : ''}`}>
                     {detail}
                   </p>
                 ))}
@@ -155,12 +155,12 @@ export default function ContactPage() {
             <h2 className="khmer-text text-2xl font-light text-gray-900 mb-6">
               {language === 'km' ? 'ផ្ញើសារមកយើង' : 'Send us a Message'}
             </h2>
-            
+
             {success && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
                 <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                <p className="text-green-700">
-                  {language === 'km' 
+                <p className={`text-green-700 ${language === 'km' ? 'khmer-text' : ''}`}>
+                  {language === 'km'
                     ? 'សាររបស់អ្នកត្រូវបានផ្ញើដោយជោគជ័យ! យើងនឹងឆ្លើយតបទៅអ្នកវិញឆាប់ៗ។'
                     : 'Your message has been sent successfully! We\'ll get back to you soon.'}
                 </p>
@@ -174,15 +174,15 @@ export default function ContactPage() {
                   placeholder={language === 'km' ? 'ឈ្មោះពេញ' : 'Full Name'}
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                 />
                 <input
                   type="email"
                   placeholder="Email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
                 />
               </div>
@@ -191,16 +191,16 @@ export default function ContactPage() {
                   type="tel"
                   placeholder={language === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone Number'}
                   value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                 />
                 <input
                   type="text"
                   placeholder={language === 'km' ? 'ប្រធានបទ' : 'Subject'}
                   required
                   value={formData.subject}
-                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
                 />
               </div>
               <textarea
@@ -208,13 +208,13 @@ export default function ContactPage() {
                 placeholder={language === 'km' ? 'សាររបស់អ្នក' : 'Your Message'}
                 required
                 value={formData.message}
-                onChange={(e) => setFormData({...formData, message: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto px-8 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className={`w-full sm:w-auto px-8 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2 disabled:opacity-50 ${language === 'km' ? 'khmer-text' : ''}`}
               >
                 {loading ? (
                   language === 'km' ? 'កំពុងផ្ញើ...' : 'Sending...'
@@ -261,7 +261,7 @@ export default function ContactPage() {
                 <h3 className="khmer-text font-medium text-gray-900 mb-2">
                   {language === 'km' ? faq.qKm : faq.qEn}
                 </h3>
-                <p className="text-gray-500 text-sm">
+                <p className={`text-gray-500 text-sm ${language === 'km' ? 'khmer-text' : ''}`}>
                   {language === 'km' ? faq.aKm : faq.aEn}
                 </p>
               </div>
@@ -276,14 +276,14 @@ export default function ContactPage() {
           <h2 className="khmer-text text-3xl font-light mb-4">
             {language === 'km' ? 'ត្រៀមខ្លួនដើម្បីទិញទំនិញហើយឬនៅ?' : 'Ready to Shop?'}
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className={`text-gray-300 mb-8 ${language === 'km' ? 'khmer-text' : ''}`}>
             {language === 'km'
               ? 'ចូលមើលផលិតផលរបស់យើងថ្ងៃនេះ'
               : 'Browse our products today'}
           </p>
           <Link
             href="/products"
-            className="inline-block bg-white text-gray-900 px-8 py-3 rounded-lg hover:bg-gray-100 transition"
+            className={`inline-block bg-white text-gray-900 px-8 py-3 rounded-lg hover:bg-gray-100 transition ${language === 'km' ? 'khmer-text' : ''}`}
           >
             {language === 'km' ? 'ទិញឥឡូវនេះ' : 'Shop Now'}
           </Link>

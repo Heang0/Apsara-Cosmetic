@@ -18,7 +18,6 @@ export default function TelegramLogin() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Only run on client side
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -28,9 +27,7 @@ export default function TelegramLogin() {
 
     const handleTelegramAuth = async (telegramUser: any) => {
       setLoading(true);
-      
       try {
-        // Send telegram user data to your backend
         const res = await fetch('/api/auth/telegram', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -41,13 +38,17 @@ export default function TelegramLogin() {
             username: telegramUser.username,
             photo_url: telegramUser.photo_url,
             auth_date: telegramUser.auth_date,
-            hash: telegramUser.hash
+            hash: telegramUser.hash,
           }),
         });
 
         const data = await res.json();
 
         if (res.ok) {
+          // Store telegramChatId in localStorage so checkout can attach it to orders
+          if (telegramUser.id) {
+            localStorage.setItem('telegramChatId', String(telegramUser.id));
+          }
           const firebaseAuth = getFirebaseAuth();
           await signInWithCustomToken(firebaseAuth, data.firebaseToken);
           router.push('/account');
@@ -62,44 +63,43 @@ export default function TelegramLogin() {
       }
     };
 
-    // Load Telegram widget
+    // Strip leading '@' — Telegram widget requires the username WITHOUT '@'
+    const rawBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '';
+    const botUsername = rawBotUsername.startsWith('@') ? rawBotUsername.slice(1) : rawBotUsername;
+
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '');
+    script.setAttribute('data-telegram-login', botUsername);
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '8');
     script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-userpic', 'true');
     script.setAttribute('data-onauth', 'onTelegramAuth(user)');
     script.async = true;
-    
+
     window.onTelegramAuth = handleTelegramAuth;
-    
+
     const container = document.getElementById('telegram-login-container');
     if (container) {
-      container.innerHTML = ''; // Clear previous scripts
+      container.innerHTML = '';
       container.appendChild(script);
     }
-    
+
     return () => {
       delete window.onTelegramAuth;
-      if (container) {
-        container.innerHTML = '';
-      }
+      if (container) container.innerHTML = '';
     };
   }, [mounted, router]);
 
   if (!mounted) {
-    return (
-      <div className="w-full h-12 bg-gray-100 rounded-lg animate-pulse"></div>
-    );
+    return <div className="w-full h-12 bg-gray-100 rounded-lg animate-pulse"></div>;
   }
 
   return (
     <div className="w-full">
       <div id="telegram-login-container" className="flex justify-center"></div>
       {loading && (
-        <p className="text-sm text-gray-500 text-center mt-2">
+        <p className={`text-sm text-gray-500 text-center mt-2 ${language === 'km' ? 'khmer-text' : ''}`}>
           {language === 'km' ? 'កំពុងដំណើរការ...' : 'Processing...'}
         </p>
       )}

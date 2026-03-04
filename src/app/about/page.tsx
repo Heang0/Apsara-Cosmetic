@@ -4,9 +4,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
-import { 
-  HeartIcon, 
-  SparklesIcon, 
+import {
+  HeartIcon,
+  SparklesIcon,
   GlobeAsiaAustraliaIcon,
   UserGroupIcon,
   CheckBadgeIcon,
@@ -19,8 +19,8 @@ export default function AboutPage() {
   const { language } = useLanguage();
 
   const title = language === 'km' ? 'អំពីយើង' : 'About Us';
-  const subtitle = language === 'km' 
-    ? 'ស្វែងយល់ពីរឿងរ៉ាវរបស់អប្សរា' 
+  const subtitle = language === 'km'
+    ? 'ស្វែងយល់ពីរឿងរ៉ាវរបស់អប្សរា'
     : 'Discover the story behind Apsara';
 
   const storyTitle = language === 'km' ? 'រឿងរ៉ាវរបស់យើង' : 'Our Story';
@@ -76,7 +76,7 @@ export default function AboutPage() {
           <h1 className="khmer-text text-4xl sm:text-5xl font-light text-gray-900 mb-4">
             {title}
           </h1>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          <p className={`text-xl text-gray-500 max-w-2xl mx-auto ${language === 'km' ? 'khmer-text' : ''}`}>
             {subtitle}
           </p>
         </div>
@@ -89,10 +89,10 @@ export default function AboutPage() {
             <h2 className="khmer-text text-3xl font-light text-gray-900 mb-6">
               {storyTitle}
             </h2>
-            <p className="text-gray-600 mb-4 leading-relaxed">
+            <p className={`text-gray-600 mb-4 leading-relaxed ${language === 'km' ? 'khmer-text' : ''}`}>
               {storyText1}
             </p>
-            <p className="text-gray-600 mb-6 leading-relaxed">
+            <p className={`text-gray-600 mb-6 leading-relaxed ${language === 'km' ? 'khmer-text' : ''}`}>
               {storyText2}
             </p>
             <div className="flex items-center gap-4">
@@ -100,7 +100,7 @@ export default function AboutPage() {
                 <CheckBadgeIcon className="w-8 h-8 text-gray-900" />
               </div>
               <div>
-                <p className="font-medium text-gray-900">
+                <p className={`font-medium text-gray-900 ${language === 'km' ? 'khmer-text' : ''}`}>
                   {language === 'km' ? 'ទទួលស្គាល់ដោយ' : 'Certified by'}
                 </p>
                 <p className="text-sm text-gray-500">Ministry of Commerce, Cambodia</p>
@@ -109,15 +109,15 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1611085583191-a3b181a88401?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+              <img
+                src="https://images.unsplash.com/photo-1611085583191-a3b181a88401?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 alt="Traditional Khmer ingredients"
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden mt-8">
-              <img 
-                src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+              <img
+                src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 alt="Apsara products"
                 className="w-full h-full object-cover"
               />
@@ -132,7 +132,7 @@ export default function AboutPage() {
           <h2 className="khmer-text text-3xl font-light text-gray-900 mb-6">
             {missionTitle}
           </h2>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <p className={`text-xl text-gray-600 leading-relaxed ${language === 'km' ? 'khmer-text' : ''}`}>
             {missionText}
           </p>
         </div>
@@ -154,7 +154,7 @@ export default function AboutPage() {
                 <h3 className="khmer-text font-medium text-gray-900 mb-2">
                   {language === 'km' ? value.titleKm : value.titleEn}
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className={`text-sm text-gray-500 ${language === 'km' ? 'khmer-text' : ''}`}>
                   {language === 'km' ? value.descKm : value.descEn}
                 </p>
               </div>
@@ -169,14 +169,14 @@ export default function AboutPage() {
           <h2 className="khmer-text text-3xl font-light mb-4">
             {language === 'km' ? 'រកឃើញភាពខុសគ្នា' : 'Discover the Difference'}
           </h2>
-          <p className="text-gray-300 mb-8">
-            {language === 'km' 
+          <p className={`text-gray-300 mb-8 ${language === 'km' ? 'khmer-text' : ''}`}>
+            {language === 'km'
               ? 'សាកល្បងផលិតផលរបស់យើងថ្ងៃនេះ ហើយមានអារម្មណ៍ថាមានភាពខុសគ្នា'
               : 'Try our products today and feel the difference'}
           </p>
           <Link
             href="/products"
-            className="inline-block bg-white text-gray-900 px-8 py-3 rounded-lg hover:bg-gray-100 transition"
+            className={`inline-block bg-white text-gray-900 px-8 py-3 rounded-lg hover:bg-gray-100 transition ${language === 'km' ? 'khmer-text' : ''}`}
           >
             {language === 'km' ? 'ទិញឥឡូវនេះ' : 'Shop Now'}
           </Link>

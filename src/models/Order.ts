@@ -31,12 +31,13 @@ const orderSchema = new mongoose.Schema({
   bakongTransactionId: String,
   bakongQrCode: String,
   notes: String,
+  telegramChatId: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
 // Generate order number
-orderSchema.pre('save', function() {
+orderSchema.pre('save', function () {
   if (!this.orderNumber) {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);

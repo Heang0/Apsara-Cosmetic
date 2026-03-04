@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: '/contact', labelKm: 'ទំនាក់ទំនង', labelEn: 'Contact' },
   ];
 
-  const bannerText = language === 'km' 
+  const bannerText = language === 'km'
     ? 'សេវាដឹកជញ្ជូនឥតគិតថ្លៃ សម្រាប់ការបញ្ជាទិញលើស $40'
     : 'Free shipping on orders over $40';
 
@@ -81,8 +81,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               {/* User Icon - Links to login or account */}
               {isAuthenticated ? (
-                <Link 
-                  href="/account" 
+                <Link
+                  href="/account"
                   className="p-2 hover:bg-gray-50 rounded-full transition flex items-center gap-2"
                 >
                   <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
@@ -93,8 +93,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </span>
                 </Link>
               ) : (
-                <Link 
-                  href="/login" 
+                <Link
+                  href="/login"
                   className="p-2 hover:bg-gray-50 rounded-full transition"
                 >
                   <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
@@ -133,15 +133,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </span>
                   </Link>
                 ))}
-                {!isAuthenticated && (
-                  <Link
-                    href="/login"
-                    className="block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {language === 'km' ? 'ចូល' : 'Login'}
-                  </Link>
-                )}
+
               </div>
             </div>
           )}
@@ -155,7 +147,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <footer className="bg-gray-50 border-t border-gray-100 py-8">
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
           <p className={language === 'km' ? 'khmer-text' : 'english-text'}>
-            {language === 'km' 
+            {language === 'km'
               ? '© 2024 អប្សរា រក្សាសិទ្ធិគ្រប់យ៉ាង'
               : '© 2024 Apsara. All rights reserved.'
             }

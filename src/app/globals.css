@@ -17,6 +17,11 @@ body {
   font-family: var(--font-khmer), 'Kantumruy Pro', sans-serif;
 }
 
+/* Ensure placeholder text in inputs/textareas with khmer-text class uses Khmer font */
+.khmer-text::placeholder {
+  font-family: var(--font-khmer), 'Kantumruy Pro', sans-serif;
+}
+
 .english-text {
   font-family: var(--font-english), 'Inter', sans-serif;
 }

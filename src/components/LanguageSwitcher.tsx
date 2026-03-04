@@ -20,10 +20,16 @@ export default function LanguageSwitcher() {
   return (
     <button
       onClick={toggleLanguage}
-      className="p-2 hover:bg-gray-50 rounded-full transition flex items-center justify-center"
+      className="flex items-center gap-1 px-2 py-1 hover:bg-gray-50 rounded-lg transition"
       title={language === 'km' ? 'Switch to English' : 'ប្តូរទៅខ្មែរ'}
     >
-      <span className="text-base">{language === 'km' ? '🇰🇭' : '🇺🇸'}</span>
+      <span className={`text-sm font-medium ${language === 'en' ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+        Eng
+      </span>
+      <span className="text-gray-300 text-sm">|</span>
+      <span className={`khmer-text text-sm font-medium ${language === 'km' ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+        ខ្មែរ
+      </span>
     </button>
   );
 }

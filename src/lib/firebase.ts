@@ -13,13 +13,21 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
+const getMissingFirebaseClientConfigKeys = () => {
+  const requiredConfig: Record<string, string | undefined> = {
+    NEXT_PUBLIC_FIREBASE_API_KEY: firebaseConfig.apiKey,
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: firebaseConfig.authDomain,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: firebaseConfig.projectId,
+    NEXT_PUBLIC_FIREBASE_APP_ID: firebaseConfig.appId,
+  };
+
+  return Object.entries(requiredConfig)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+};
+
 export const hasFirebaseClientConfig = () => {
-  return Boolean(
-    firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId
-  );
+  return getMissingFirebaseClientConfigKeys().length === 0;
 };
 
 export const getFirebaseApp = (): FirebaseApp => {
@@ -28,7 +36,8 @@ export const getFirebaseApp = (): FirebaseApp => {
   }
 
   if (!hasFirebaseClientConfig()) {
-    throw new Error('Missing NEXT_PUBLIC Firebase configuration');
+    const missingKeys = getMissingFirebaseClientConfigKeys();
+    throw new Error(`Missing NEXT_PUBLIC Firebase configuration: ${missingKeys.join(', ')}`);
   }
 
   if (!app) {
