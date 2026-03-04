@@ -11,10 +11,12 @@ interface User {
   email: string;
   phone?: string;
   photoURL?: string;
+  telegramChatId?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  telegramChatId: string | null;
   loading: boolean;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -24,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [telegramChatId, setTelegramChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -32,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!hasFirebaseClientConfig()) {
       setUser(null);
+      setTelegramChatId(null);
       setLoading(false);
       return () => {};
     }
@@ -40,15 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const firebaseAuth = getFirebaseAuth();
       unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
         if (firebaseUser) {
+          const storedTelegramChatId =
+            typeof window !== 'undefined' ? localStorage.getItem('telegramChatId') : null;
+
           setUser({
             id: firebaseUser.uid,
             name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
             email: firebaseUser.email || '',
             phone: firebaseUser.phoneNumber || '',
             photoURL: firebaseUser.photoURL || '',
+            telegramChatId: storedTelegramChatId || undefined,
           });
+          setTelegramChatId(storedTelegramChatId || null);
         } else {
           setUser(null);
+          setTelegramChatId(null);
         }
         setLoading(false);
       });
@@ -64,11 +74,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       if (!hasFirebaseClientConfig()) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('telegramChatId');
+        }
         router.push('/');
         return;
       }
       const firebaseAuth = getFirebaseAuth();
       await firebaseSignOut(firebaseAuth);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('telegramChatId');
+      }
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -78,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user,
+      telegramChatId,
       loading,
       logout,
       isAuthenticated: !!user,

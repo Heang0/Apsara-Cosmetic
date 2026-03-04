@@ -51,8 +51,13 @@ export async function POST(request: Request) {
         lastLogin: new Date()
       });
     } else {
-      // Update last login
+      // Refresh Telegram profile fields and update last login
       user.lastLogin = new Date();
+      user.telegramUsername = telegramData.username || user.telegramUsername;
+      user.telegramChatId = String(telegramData.id || user.telegramChatId || '');
+      if (telegramData.photo_url) {
+        user.photoURL = telegramData.photo_url;
+      }
       await user.save();
     }
 

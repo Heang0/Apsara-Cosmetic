@@ -183,7 +183,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(false)}
-                className="w-full text-gray-500 hover:text-gray-700 text-sm"
+                className={`w-full text-gray-500 hover:text-gray-700 text-sm ${language === 'km' ? 'khmer-text' : ''}`}
               >
                 ← {language === 'km' ? 'ត្រលប់' : 'Back'}
               </button>
@@ -288,7 +288,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
-                    className="text-sm text-gray-500 hover:text-gray-700"
+                    className={`text-sm text-gray-500 hover:text-gray-700 ${language === 'km' ? 'khmer-text' : ''}`}
                   >
                     {language === 'km' ? 'ភ្លេចពាក្យសម្ងាត់?' : 'Forgot password?'}
                   </button>

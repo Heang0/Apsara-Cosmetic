@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
+import User from '@/models/User';
 import { sendOrderNotification, sendLowStockNotification } from '@/lib/telegram';
 import { sendOrderReceipt, sendAdminNotification } from '@/lib/email';
 
@@ -39,8 +41,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     await connectDB();
 
+    const { userId, ...incomingOrderData } = body;
+    let resolvedTelegramChatId =
+      typeof incomingOrderData.telegramChatId === 'string'
+        ? incomingOrderData.telegramChatId.trim()
+        : '';
+
+    if (typeof userId === 'string' && userId.trim() && mongoose.Types.ObjectId.isValid(userId.trim())) {
+      const userRecord = await User.findById(userId.trim()).select('telegramChatId');
+      if (userRecord?.telegramChatId) {
+        resolvedTelegramChatId = String(userRecord.telegramChatId);
+      }
+    }
+
     // Update product stock in one batch to reduce checkout latency.
-    const stockOps = (body.items || []).map((item: any) => ({
+    const stockOps = (incomingOrderData.items || []).map((item: any) => ({
       updateOne: {
         filter: { _id: item.product },
         update: { $inc: { stock: -Number(item.quantity || 0) } }
@@ -52,7 +67,8 @@ export async function POST(request: Request) {
     }
 
     const order = await Order.create({
-      ...body,
+      ...incomingOrderData,
+      telegramChatId: resolvedTelegramChatId || undefined,
       orderStatus: 'pending',
       paymentStatus: 'pending'
     });
@@ -62,7 +78,7 @@ export async function POST(request: Request) {
       try {
         await sendOrderNotification(order);
 
-        const productIds = (body.items || []).map((item: any) => item.product);
+        const productIds = (incomingOrderData.items || []).map((item: any) => item.product);
         if (productIds.length === 0) {
           return;
         }

@@ -14,6 +14,7 @@ import {
   MapPinIcon, 
   HeartIcon,
   ArrowRightIcon,
+  ArrowRightOnRectangleIcon,
   ClockIcon,
   TruckIcon,
   CheckCircleIcon,
@@ -56,7 +57,7 @@ interface Address {
 
 export default function AccountPage() {
   const { language } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -183,6 +184,10 @@ export default function AccountPage() {
     setPaymentKhqr(null);
     setPaymentMessage('');
     setPaymentStatus('pending');
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handlePayNow = async (order: Order, event?: React.MouseEvent) => {
@@ -415,10 +420,22 @@ export default function AccountPage() {
     <Layout>
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 flex items-center justify-between gap-3">
           <h1 className="khmer-text text-2xl sm:text-3xl font-light text-gray-900">
             {language === 'km' ? 'គណនីរបស់ខ្ញុំ' : 'My Account'}
           </h1>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition"
+            aria-label="Log out"
+            title={language === 'km' ? 'Log out' : 'Log out'}
+          >
+            <ArrowRightOnRectangleIcon className="w-4 h-4" />
+            <span className={language === 'km' ? 'khmer-text' : 'english-text'}>
+              {language === 'km' ? 'Log out' : 'Log out'}
+            </span>
+          </button>
         </div>
 
         {/* Tabs */}

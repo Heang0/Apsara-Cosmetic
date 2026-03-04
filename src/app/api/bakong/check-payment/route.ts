@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import { sendOrderConfirmationToUser } from '@/lib/telegram';
 
 const cleanEnvValue = (value?: string) => {
   if (!value) return '';
@@ -82,6 +83,12 @@ export async function GET(request: Request) {
         order.orderStatus = 'processing';
       }
       await order.save();
+
+      if (order.telegramChatId) {
+        void sendOrderConfirmationToUser(order, String(order.telegramChatId)).catch((telegramError) => {
+          console.error('Failed to send Telegram order confirmation:', telegramError);
+        });
+      }
 
       return NextResponse.json({ status: 'paid' });
     }

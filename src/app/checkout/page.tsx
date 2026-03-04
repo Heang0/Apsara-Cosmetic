@@ -37,7 +37,7 @@ interface PaymentCheckResponse {
 export default function CheckoutPage() {
   const router = useRouter();
   const { language } = useLanguage();
-  const { user } = useAuth();
+  const { user, telegramChatId } = useAuth();
   const { items, totalPrice, clearCart, validateCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -267,9 +267,12 @@ export default function CheckoutPage() {
       await validateCart();
 
       const currentItems: CartItem[] = items.length > 0 ? items : JSON.parse(sessionStorage.getItem('checkoutItems') || '[]');
+      const fallbackTelegramChatId =
+        typeof window !== 'undefined' ? localStorage.getItem('telegramChatId') || undefined : undefined;
 
       const orderNumber = generateOrderNumber();
       const orderData = {
+        userId: user?.id,
         orderNumber,
         customer: {
           name: formData.name,
@@ -294,8 +297,7 @@ export default function CheckoutPage() {
         shippingFee,
         total,
         notes: formData.notes,
-        // Attach telegramChatId so the backend can send payment confirmation via Telegram
-        telegramChatId: typeof window !== 'undefined' ? (localStorage.getItem('telegramChatId') || undefined) : undefined,
+        telegramChatId: telegramChatId || fallbackTelegramChatId,
       };
 
       const orderRes = await fetch('/api/orders', {
@@ -721,4 +723,3 @@ export default function CheckoutPage() {
     </Layout>
   );
 }
-

@@ -63,9 +63,9 @@ export default function TelegramLogin() {
       }
     };
 
-    // Strip leading '@' — Telegram widget requires the username WITHOUT '@'
+    // Telegram widget requires bot username without leading '@'
     const rawBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '';
-    const botUsername = rawBotUsername.startsWith('@') ? rawBotUsername.slice(1) : rawBotUsername;
+    const botUsername = rawBotUsername.replace(/^@+/, '');
 
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
