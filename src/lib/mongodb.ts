@@ -1,11 +1,12 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-// Check if MONGODB_URI is defined
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in .env.local');
-}
+const getMongoUri = (): string => {
+  const mongodbUri = process.env.MONGODB_URI?.trim();
+  if (!mongodbUri) {
+    throw new Error('Missing MONGODB_URI. Set it in Vercel Project Settings > Environment Variables');
+  }
+  return mongodbUri;
+};
 
 // Define the cached connection type
 interface MongooseCache {
@@ -35,8 +36,7 @@ async function connectDB(): Promise<typeof mongoose> {
       bufferCommands: false,
     };
 
-    // Now TypeScript knows MONGODB_URI is definitely a string
-    cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongooseInstance) => {
+    cached.promise = mongoose.connect(getMongoUri(), opts).then((mongooseInstance) => {
       return mongooseInstance;
     });
   }
