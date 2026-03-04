@@ -3,24 +3,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
-import admin from 'firebase-admin';
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  try {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: privateKey,
-      }),
-    });
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error);
-  }
-}
+import { getFirebaseAdminAuth } from '@/lib/firebase-admin';
 
 export async function POST(request: Request) {
   try {
@@ -74,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     // Create Firebase custom token
-    const firebaseToken = await admin.auth().createCustomToken(user._id.toString());
+    const firebaseToken = await getFirebaseAdminAuth().createCustomToken(user._id.toString());
 
     // Create JWT for your app
     const token = jwt.sign(

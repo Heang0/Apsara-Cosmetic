@@ -1,20 +1,9 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import admin from 'firebase-admin';
+import { getFirebaseAdminAuth } from '@/lib/firebase-admin';
 
 const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 1 day
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    })
-  });
-}
 
 export async function GET(request: Request) {
   try {
@@ -24,7 +13,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decodedToken = await getFirebaseAdminAuth().verifyIdToken(token);
     const email = decodedToken.email;
 
     if (!email) {
