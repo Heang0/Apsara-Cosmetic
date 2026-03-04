@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFirebaseAuth } from '@/lib/firebase';
+import { getFirebaseAuth, hasFirebaseClientConfig } from '@/lib/firebase';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 
 interface User {
@@ -29,6 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let unsubscribe = () => {};
+
+    if (!hasFirebaseClientConfig()) {
+      setUser(null);
+      setLoading(false);
+      return () => {};
+    }
 
     try {
       const firebaseAuth = getFirebaseAuth();
@@ -57,6 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      if (!hasFirebaseClientConfig()) {
+        router.push('/');
+        return;
+      }
       const firebaseAuth = getFirebaseAuth();
       await firebaseSignOut(firebaseAuth);
       router.push('/');

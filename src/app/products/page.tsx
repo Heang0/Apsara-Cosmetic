@@ -42,10 +42,8 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    if (products.length > 0) {
-      updateCategories();
-      filterProducts();
-    }
+    updateCategories();
+    filterProducts();
   }, [language, products]);
 
   useEffect(() => {
@@ -79,24 +77,39 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products');
-      const data = await res.json() as Product[];
+      const rawData = await res.json();
+      const data: Product[] = Array.isArray(rawData) ? rawData : [];
+
+      if (!res.ok) {
+        const errorMessage = (rawData && typeof rawData === 'object' && 'error' in rawData)
+          ? String((rawData as { error?: unknown }).error)
+          : 'Failed to fetch products';
+        throw new Error(errorMessage);
+      }
+
+      if (!Array.isArray(rawData)) {
+        console.error('Products API returned non-array response:', rawData);
+      }
+
       setProducts(data);
       setFilteredProducts(data);
-      
-      const uniqueCategoryNames = [...new Set(data.map(p => p.category))];
-      
+
+      const uniqueCategoryNames = [...new Set(data.map((product) => product.category))];
       const uniqueCats: Category[] = uniqueCategoryNames.map((catName) => {
-        const product = data.find(p => p.category === catName);
+        const product = data.find((item) => item.category === catName);
         return {
           id: catName,
           name: language === 'km' ? catName : (product?.categoryEn || catName),
           originalName: catName
         };
       });
-      
+
       setCategories(uniqueCats);
     } catch (error) {
       console.error('Error:', error);
+      setProducts([]);
+      setFilteredProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }

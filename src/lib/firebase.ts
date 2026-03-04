@@ -13,7 +13,7 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
-const hasFirebaseClientConfig = () => {
+export const hasFirebaseClientConfig = () => {
   return Boolean(
     firebaseConfig.apiKey &&
     firebaseConfig.authDomain &&
