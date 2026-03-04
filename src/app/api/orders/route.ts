@@ -4,7 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
 import User from '@/models/User';
-import { sendOrderNotification, sendLowStockNotification } from '@/lib/telegram';
+import { sendLowStockNotification } from '@/lib/telegram';
 import { sendOrderReceipt, sendAdminNotification } from '@/lib/email';
 
 // GET all orders (for admin)
@@ -76,8 +76,6 @@ export async function POST(request: Request) {
     // Send notifications asynchronously so order response returns faster.
     void (async () => {
       try {
-        await sendOrderNotification(order);
-
         const productIds = (incomingOrderData.items || []).map((item: any) => item.product);
         if (productIds.length === 0) {
           return;

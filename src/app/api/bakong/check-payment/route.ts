@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import { sendOrderConfirmationToUser } from '@/lib/telegram';
+import { sendOrderConfirmationToUser, sendOrderNotification } from '@/lib/telegram';
 
 const cleanEnvValue = (value?: string) => {
   if (!value) return '';
@@ -89,6 +89,9 @@ export async function GET(request: Request) {
           console.error('Failed to send Telegram order confirmation:', telegramError);
         });
       }
+      void sendOrderNotification(order).catch((telegramError) => {
+        console.error('Failed to send admin Telegram order notification:', telegramError);
+      });
 
       return NextResponse.json({ status: 'paid' });
     }

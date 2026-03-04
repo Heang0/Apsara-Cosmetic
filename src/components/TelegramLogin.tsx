@@ -52,7 +52,7 @@ export default function TelegramLogin() {
           if (data.user) {
             localStorage.setItem('telegramUserProfile', JSON.stringify({
               name: data.user.name || '',
-              email: data.user.email || '',
+              telegramUsername: data.user.telegramUsername || '',
               photoURL: data.user.photoURL || '',
             }));
           }

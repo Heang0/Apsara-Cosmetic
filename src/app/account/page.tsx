@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
 import axios, { AxiosError } from 'axios';
 import { 
   UserIcon, 
@@ -81,6 +82,10 @@ export default function AccountPage() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentCheckTick, setPaymentCheckTick] = useState(0);
+  const [profileName, setProfileName] = useState('');
+  const [profilePhotoURL, setProfilePhotoURL] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileNotice, setProfileNotice] = useState('');
   const BAKONG_LOGO_URL = 'https://bakong.nbc.gov.kh/images/favicon.png';
 
   useEffect(() => {
@@ -90,6 +95,13 @@ export default function AccountPage() {
     }
     fetchOrders();
     fetchAddresses();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    setProfileName(user.name || '');
+    setProfilePhotoURL(user.photoURL || '');
+    setProfileNotice('');
   }, [user]);
 
   useEffect(() => {
@@ -188,6 +200,38 @@ export default function AccountPage() {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const cleanName = profileName.trim();
+    if (!cleanName) {
+      setProfileNotice(language === 'km' ? 'Name is required' : 'Name is required');
+      return;
+    }
+
+    try {
+      setSavingProfile(true);
+      setProfileNotice('');
+      const firebaseUser = getFirebaseAuth().currentUser;
+
+      if (!firebaseUser) {
+        throw new Error('No authenticated user');
+      }
+
+      await updateProfile(firebaseUser, {
+        displayName: cleanName,
+        photoURL: profilePhotoURL.trim() || null,
+      });
+      await firebaseUser.reload();
+      setProfileNotice(language === 'km' ? 'Profile updated successfully' : 'Profile updated successfully');
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setProfileNotice(language === 'km' ? 'Failed to update profile' : 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handlePayNow = async (order: Order, event?: React.MouseEvent) => {
@@ -538,41 +582,77 @@ export default function AccountPage() {
             </div>
           )}
 
-          {/* Profile Tab */}
+                              {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="max-w-md mx-auto">
               <div className="text-center mb-8">
                 <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                  {profilePhotoURL ? (
+                    <img src={profilePhotoURL} alt={profileName || user.name} className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <UserIcon className="w-12 h-12 text-gray-400" />
                   )}
                 </div>
-                <h2 className="khmer-text text-xl font-medium text-gray-900">{user.name}</h2>
-                <p className="text-sm text-gray-400 mt-1">{user.email}</p>
+                <h2 className="khmer-text text-xl font-medium text-gray-900">{profileName || user.name}</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {user.email && !user.email.endsWith('@telegram.user')
+                    ? user.email
+                    : (language === 'km' ? 'Connected with Telegram' : 'Connected with Telegram')}
+                </p>
               </div>
 
-              <div className="space-y-4">
+              <form onSubmit={handleProfileSave} className="space-y-4">
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="khmer-text text-xs text-gray-400 mb-1">
-                    {language === 'km' ? 'ឈ្មោះ' : 'Name'}
-                  </p>
-                  <p className="khmer-text text-gray-900">{user.name}</p>
+                  <label className="block text-xs text-gray-400 mb-1">{language === 'km' ? 'Name' : 'Name'}</label>
+                  <input
+                    type="text"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
                 </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <label className="block text-xs text-gray-400 mb-1">{language === 'km' ? 'Profile photo URL' : 'Profile photo URL'}</label>
+                  <input
+                    type="url"
+                    value={profilePhotoURL}
+                    onChange={(e) => setProfilePhotoURL(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900"
+                  />
+                </div>
+
                 <div className="border border-gray-200 rounded-lg p-4">
                   <p className="text-xs text-gray-400 mb-1">Email</p>
-                  <p className="english-text text-gray-900">{user.email}</p>
+                  <p className="english-text text-gray-900">
+                    {user.email && !user.email.endsWith('@telegram.user')
+                      ? user.email
+                      : (language === 'km' ? 'Connected with Telegram (email hidden)' : 'Connected with Telegram (email hidden)')}
+                  </p>
                 </div>
+
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="khmer-text text-xs text-gray-400 mb-1">
-                    {language === 'km' ? 'សមាជិកតាំងពី' : 'Member since'}
-                  </p>
-                  <p className="khmer-text text-gray-900">
-                    {memberSince}
-                  </p>
+                  <p className="khmer-text text-xs text-gray-400 mb-1">{language === 'km' ? 'Member since' : 'Member since'}</p>
+                  <p className="khmer-text text-gray-900">{memberSince}</p>
                 </div>
-              </div>
+
+                {profileNotice && (
+                  <p className={`text-sm ${profileNotice.toLowerCase().includes('failed') ? 'text-red-500' : 'text-green-600'}`}>
+                    {profileNotice}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="w-full py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {savingProfile
+                    ? (language === 'km' ? 'Saving...' : 'Saving...')
+                    : (language === 'km' ? 'Save Profile' : 'Save Profile')}
+                </button>
+              </form>
             </div>
           )}
 
@@ -968,3 +1048,5 @@ export default function AccountPage() {
     </Layout>
   );
 }
+
+

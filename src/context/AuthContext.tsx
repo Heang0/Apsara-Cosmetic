@@ -12,11 +12,12 @@ interface User {
   phone?: string;
   photoURL?: string;
   telegramChatId?: string;
+  telegramUsername?: string;
 }
 
 interface TelegramStoredProfile {
   name?: string;
-  email?: string;
+  telegramUsername?: string;
   photoURL?: string;
 }
 
@@ -67,10 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             id: firebaseUser.uid,
             name: firebaseUser.displayName || storedTelegramProfile?.name || firebaseUser.email?.split('@')[0] || '',
-            email: firebaseUser.email || storedTelegramProfile?.email || '',
+            email: firebaseUser.email || '',
             phone: firebaseUser.phoneNumber || '',
             photoURL: firebaseUser.photoURL || storedTelegramProfile?.photoURL || '',
             telegramChatId: storedTelegramChatId || undefined,
+            telegramUsername: storedTelegramProfile?.telegramUsername || undefined,
           });
           setTelegramChatId(storedTelegramChatId || null);
         } else {
