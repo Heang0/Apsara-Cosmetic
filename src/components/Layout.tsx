@@ -30,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const bannerText = language === 'km'
     ? 'សេវាដឹកជញ្ជូនឥតគិតថ្លៃ សម្រាប់ការបញ្ជាទិញលើស $25'
-    : 'Free shipping on orders over $25Shipping costs only $1.50 and is free for orders over $25.';
+    : 'Free shipping on orders over $25.';
 
   if (isAdmin) {
     return <>{children}</>;
