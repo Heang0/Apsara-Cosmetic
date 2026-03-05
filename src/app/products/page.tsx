@@ -240,19 +240,34 @@ export default function ProductsPage() {
           autoPlay
           muted
           playsInline
+          controls={false}
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+          disableRemotePlayback
           preload="metadata"
           poster="/images/banners/bannner1.jpg"
           className="banner-video absolute inset-0 w-full h-full object-cover object-center"
+          onCanPlay={(event) => {
+            event.currentTarget.play().catch(() => {});
+          }}
         >
           <source src="/images/banners/banner1.mp4" type="video/mp4" />
         </video>
         <video
           ref={bannerVideoBRef}
+          autoPlay
           muted
           playsInline
+          controls={false}
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+          disableRemotePlayback
           preload="metadata"
           poster="/images/banners/bannner1.jpg"
           className="banner-video absolute inset-0 w-full h-full object-cover object-center"
+          onCanPlay={(event) => {
+            event.currentTarget.play().catch(() => {});
+          }}
         >
           <source src="/images/banners/banner1.mp4" type="video/mp4" />
         </video>
@@ -379,6 +394,16 @@ export default function ProductsPage() {
           transition: opacity 420ms ease-in-out;
           will-change: opacity;
           pointer-events: none;
+        }
+
+        /* Hide iOS/macOS native big play button overlay on inline video */
+        .banner-video::-webkit-media-controls-start-playback-button {
+          display: none !important;
+          -webkit-appearance: none;
+        }
+
+        .banner-video::-webkit-media-controls {
+          display: none !important;
         }
 
         @keyframes oceanFloat {
