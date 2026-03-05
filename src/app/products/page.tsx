@@ -163,7 +163,7 @@ export default function ProductsPage() {
   return (
     <Layout>
       {/* Hero Banner with Floating Product */}
-      <div className="relative w-full h-[420px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
+      <div className="relative w-full h-[300px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
         <img
           src="/images/banners/bannner1.jpg"
           alt="Beauty banner"
