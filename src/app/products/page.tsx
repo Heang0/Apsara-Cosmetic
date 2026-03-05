@@ -150,8 +150,6 @@ export default function ProductsPage() {
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    // Scroll to products section smoothly
-    document.getElementById('products-grid')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const searchPlaceholder = language === 'km' 

@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Category from '@/models/Category';
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
 // GET all categories or single category by ID
 export async function GET(request: Request) {
   try {
@@ -47,10 +54,22 @@ export async function POST(request: Request) {
     }
     
     await connectDB();
+
+    const baseSlug = slugify(String(body.slug || body.nameEn || body.name || ''));
+    let slug = baseSlug || `category-${Date.now()}`;
+
+    if (baseSlug) {
+      let suffix = 1;
+      while (await Category.exists({ slug })) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix += 1;
+      }
+    }
     
     const category = await Category.create({
       name: body.name.trim(),
       nameEn: body.nameEn.trim(),
+      slug,
       description: body.description || '',
       isActive: body.isActive ?? true,
       order: body.order || 0,

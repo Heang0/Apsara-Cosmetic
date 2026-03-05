@@ -36,6 +36,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <div className="bg-gray-900 text-white text-center py-2 text-sm">
