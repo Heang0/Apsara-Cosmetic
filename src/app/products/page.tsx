@@ -35,6 +35,10 @@ export default function ProductsPage() {
   const [visibleProducts, setVisibleProducts] = useState<number>(8);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef<HTMLDivElement>(null);
+  const bannerVideoARef = useRef<HTMLVideoElement>(null);
+  const bannerVideoBRef = useRef<HTMLVideoElement>(null);
+  const activeBannerVideoRef = useRef<'a' | 'b'>('a');
+  const bannerSwapLockRef = useRef(false);
   const { language } = useLanguage();
 
   useEffect(() => {
@@ -73,6 +77,75 @@ export default function ProductsPage() {
     setVisibleProducts(8);
     setHasMore(filteredProducts.length > 8);
   }, [filteredProducts]);
+
+  // Crossfade two identical videos for smoother seamless looping.
+  useEffect(() => {
+    const videoA = bannerVideoARef.current;
+    const videoB = bannerVideoBRef.current;
+    if (!videoA || !videoB) return;
+
+    const safePlay = async (video: HTMLVideoElement) => {
+      try {
+        await video.play();
+      } catch {
+        // Ignore autoplay restrictions; muted+playsInline usually succeeds.
+      }
+    };
+
+    const prepareVideo = (video: HTMLVideoElement, opacity: string) => {
+      video.muted = true;
+      video.playsInline = true;
+      video.playbackRate = 0.7;
+      video.style.opacity = opacity;
+    };
+
+    prepareVideo(videoA, '1');
+    prepareVideo(videoB, '0');
+    activeBannerVideoRef.current = 'a';
+    bannerSwapLockRef.current = false;
+
+    videoA.currentTime = 0;
+    videoB.currentTime = 0;
+    void safePlay(videoA);
+    videoB.pause();
+
+    let rafId = 0;
+    let swapTimerId: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = () => {
+      const activeVideo = activeBannerVideoRef.current === 'a' ? videoA : videoB;
+      const nextVideo = activeBannerVideoRef.current === 'a' ? videoB : videoA;
+      const crossfadeAt = Math.max(0.25, (activeVideo.duration || 0) - 0.45);
+
+      if (!bannerSwapLockRef.current && activeVideo.duration && activeVideo.currentTime >= crossfadeAt) {
+        bannerSwapLockRef.current = true;
+        nextVideo.currentTime = 0;
+        nextVideo.playbackRate = 0.7;
+        void safePlay(nextVideo);
+        nextVideo.style.opacity = '1';
+        activeVideo.style.opacity = '0';
+
+        swapTimerId = setTimeout(() => {
+          activeVideo.pause();
+          activeVideo.currentTime = 0;
+          activeBannerVideoRef.current = activeBannerVideoRef.current === 'a' ? 'b' : 'a';
+          bannerSwapLockRef.current = false;
+        }, 420);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      if (swapTimerId) clearTimeout(swapTimerId);
+      cancelAnimationFrame(rafId);
+      bannerSwapLockRef.current = false;
+      videoA.pause();
+      videoB.pause();
+    };
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -162,11 +235,27 @@ export default function ProductsPage() {
     <Layout>
       {/* Hero Banner with Floating Product */}
       <div className="relative w-full h-[220px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
-        <img
-          src="/images/banners/bannner1.jpg"
-          alt="Beauty banner"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
+        <video
+          ref={bannerVideoARef}
+          autoPlay
+          muted
+          playsInline
+          preload="metadata"
+          poster="/images/banners/bannner1.jpg"
+          className="banner-video absolute inset-0 w-full h-full object-cover object-center"
+        >
+          <source src="/images/banners/banner1.mp4" type="video/mp4" />
+        </video>
+        <video
+          ref={bannerVideoBRef}
+          muted
+          playsInline
+          preload="metadata"
+          poster="/images/banners/bannner1.jpg"
+          className="banner-video absolute inset-0 w-full h-full object-cover object-center"
+        >
+          <source src="/images/banners/banner1.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-black/5" />
 
         <div className="absolute inset-0 px-4 sm:px-6">
@@ -286,6 +375,12 @@ export default function ProductsPage() {
       </div>
 
       <style jsx>{`
+        .banner-video {
+          transition: opacity 420ms ease-in-out;
+          will-change: opacity;
+          pointer-events: none;
+        }
+
         @keyframes oceanFloat {
           0% {
             transform: translate3d(-10px, 0px, 0) rotate(-1deg);
