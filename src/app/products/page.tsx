@@ -163,7 +163,7 @@ export default function ProductsPage() {
   return (
     <Layout>
       {/* Hero Banner with Floating Product */}
-      <div className="relative w-full h-[300px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
+      <div className="relative w-full h-[220px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
         <img
           src="/images/banners/bannner1.jpg"
           alt="Beauty banner"
@@ -173,7 +173,7 @@ export default function ProductsPage() {
 
         <div className="absolute inset-0 px-4 sm:px-6">
           <div className="relative w-full h-full">
-            <div className="product-wrap product-left absolute left-[-6%] sm:left-[2%] lg:left-[7%] bottom-[7%] w-[220px] sm:w-[320px] lg:w-[430px] z-10">
+            <div className="product-wrap product-left absolute left-[-6%] sm:left-[2%] lg:left-[7%] bottom-[5%] w-[190px] sm:w-[320px] lg:w-[430px] z-10">
               <div className="floating-shadow shadow-a absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
               <img
                 src="/images/seasonal/pro1.png"
@@ -182,7 +182,7 @@ export default function ProductsPage() {
               />
             </div>
 
-            <div className="product-wrap product-center absolute left-1/2 -translate-x-1/2 bottom-[5%] w-[290px] sm:w-[420px] lg:w-[560px] z-20">
+            <div className="product-wrap product-center absolute left-1/2 -translate-x-1/2 bottom-[4%] w-[255px] sm:w-[420px] lg:w-[560px] z-20">
               <div className="floating-shadow shadow-b absolute left-1/2 -translate-x-1/2 bottom-0 w-[80%] h-6 sm:h-7 lg:h-8 rounded-full" />
               <img
                 src="/images/seasonal/pro2.png"
@@ -191,7 +191,7 @@ export default function ProductsPage() {
               />
             </div>
 
-            <div className="product-wrap product-right absolute right-[-6%] sm:right-[2%] lg:right-[7%] bottom-[7%] w-[220px] sm:w-[320px] lg:w-[430px] z-10">
+            <div className="product-wrap product-right absolute right-[-6%] sm:right-[2%] lg:right-[7%] bottom-[5%] w-[190px] sm:w-[320px] lg:w-[430px] z-10">
               <div className="floating-shadow shadow-c absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
               <img
                 src="/images/seasonal/pro3.png"

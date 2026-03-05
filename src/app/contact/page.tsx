@@ -98,8 +98,8 @@ export default function ContactPage() {
     {
       qKm: 'តើការដឹកជញ្ជូនចំណាយប៉ុន្មាន?',
       qEn: 'How much is shipping?',
-      aKm: 'ការដឹកជញ្ជូនមានតម្លៃត្រឹមតែ ១.៥០$ ប៉ុណ្ណោះ និងឥតគិតថ្លៃសម្រាប់ការបញ្ជាទិញលើសពី ៤០$។',
-      aEn: 'Shipping costs only $1.50 and is free for orders over $40.'
+      aKm: 'ការដឹកជញ្ជូនមានតម្លៃត្រឹមតែ ១.៥០$ ប៉ុណ្ណោះ និងឥតគិតថ្លៃសម្រាប់ការបញ្ជាទិញលើសពី ២៥$។',
+      aEn: 'Shipping costs only $1.50 and is free for orders over $25.'
     },
   ];
 
