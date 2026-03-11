@@ -44,6 +44,8 @@ interface BakongQrResponse {
   expiresAt: string;
 }
 
+const PAID_CONFIRMATION_REDIRECT_MS = 2600;
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { language } = useLanguage();
@@ -152,7 +154,7 @@ export default function CheckoutPage() {
           sessionStorage.removeItem('checkoutItems');
           setTimeout(() => {
             router.push('/order-confirmation/' + orderId);
-          }, 1200);
+          }, PAID_CONFIRMATION_REDIRECT_MS);
           return;
         }
 
