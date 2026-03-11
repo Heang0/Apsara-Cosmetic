@@ -192,31 +192,42 @@ export default function ProductsPage() {
         {/* Categories */}
         {categories.length > 0 && (
           <div className="animate-fade-in animation-delay-200 mb-6 sm:mb-8">
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={'px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ' +
-                  (selectedCategory === 'all'
-                    ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
-                  ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
-              >
-                {allCategoriesText}
-              </button>
+            <div className="relative">
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-2 min-w-max justify-start pr-12">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={'px-6 py-2.5 rounded-full text-sm font-medium flex-shrink-0 transition-all duration-300 ' +
+                      (selectedCategory === 'all'
+                        ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                      ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
+                  >
+                    {allCategoriesText}
+                  </button>
 
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryClick(category.originalName)}
-                  className={'px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ' +
-                    (selectedCategory === category.originalName
-                      ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
-                    ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
-                >
-                  {category.name}
-                </button>
-              ))}
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategoryClick(category.originalName)}
+                      className={'px-6 py-2.5 rounded-full text-sm font-medium flex-shrink-0 transition-all duration-300 ' +
+                        (selectedCategory === category.originalName
+                          ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                        ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clean Arrow Indicator */}
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
             </div>
           </div>
         )}

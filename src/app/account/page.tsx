@@ -662,10 +662,10 @@ export default function AccountPage() {
               ) : orders.length > 0 ? (
                 <div className="space-y-3">
                   {orders.map((order) => (
-                    <div
+                    <Link
                       key={order._id}
-                      onClick={() => setSelectedOrder(order)}
-                      className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition group cursor-pointer"
+                      href={`/account/orders/${order._id}`}
+                      className="block w-full text-left border border-gray-200 rounded-lg p-4 hover:border-gray-900 hover:shadow-sm transition group cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium text-gray-900">{order.orderNumber}</p>
@@ -692,7 +692,15 @@ export default function AccountPage() {
                           </button>
                         </div>
                       )}
-                    </div>
+                      <div className="mt-3 flex items-center justify-end">
+                        <span className="text-xs text-gray-500 group-hover:text-gray-900 flex items-center gap-1">
+                          <span className={language === 'km' ? 'khmer-text' : 'english-text'}>
+                            {language === 'km' ? 'មើលលម្អិត' : 'View Details'}
+                          </span>
+                          <ArrowRightIcon className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               ) : (

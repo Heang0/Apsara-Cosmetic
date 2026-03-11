@@ -28,6 +28,11 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ['bakong', 'cod'], default: 'bakong' },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
   orderStatus: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
+  statusHistory: [{
+    status: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] },
+    timestamp: { type: Date, default: Date.now },
+    note: String
+  }],
   bakongTransactionId: String,
   bakongQrCode: String,
   bakongExpiresAt: Date,
