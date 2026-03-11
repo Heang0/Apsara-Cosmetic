@@ -13,6 +13,7 @@ import {
   ArrowRightOnRectangleIcon,
   UserIcon,
   ChartBarIcon,
+  ShieldCheckIcon,
   Bars3Icon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -30,6 +31,7 @@ const menuItems = [
   { href: '/admin/dashboard/categories', icon: TagIcon, nameKm: 'ប្រភេទ', nameEn: 'Categories' },
   { href: '/admin/dashboard/orders', icon: ShoppingCartIcon, nameKm: 'ការបញ្ជាទិញ', nameEn: 'Orders' },
   { href: '/admin/dashboard/customers', icon: UsersIcon, nameKm: 'អតិថិជន', nameEn: 'Customers' },
+  { href: '/admin/dashboard/audit', icon: ShieldCheckIcon, nameKm: 'កំណត់ហេតុសុវត្ថិភាព', nameEn: 'Audit Logs' },
   { href: '/admin/dashboard/reports', icon: ChartBarIcon, nameKm: 'របាយការណ៍', nameEn: 'Reports' },
   { href: '/admin/dashboard/settings', icon: Cog6ToothIcon, nameKm: 'ការកំណត់', nameEn: 'Settings' },
 ];
@@ -42,26 +44,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const userStr = localStorage.getItem('adminUser');
-    
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-    
-    if (userStr) {
+    const loadSession = async () => {
       try {
-        setAdmin(JSON.parse(userStr));
-      } catch (e) {
-        console.error('Failed to parse admin user');
-      }
-    }
-  }, []);
+        const response = await fetch('/api/admin/session', { cache: 'no-store' });
+        if (!response.ok) {
+          router.push('/admin/login');
+          return;
+        }
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+        const data = await response.json();
+        setAdmin(data.admin || null);
+      } catch {
+        router.push('/admin/login');
+      }
+    };
+
+    void loadSession();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await fetch('/api/admin/logout', {
+      method: 'POST',
+    }).catch(() => undefined);
     router.push('/admin/login');
   };
 

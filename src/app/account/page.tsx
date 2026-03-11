@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
+import BakongKhqrCard from '@/components/BakongKhqrCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -57,6 +58,21 @@ interface Address {
   isDefault: boolean;
 }
 
+interface BakongQrResponse {
+  qrCode: string;
+  merchantName: string;
+  amountUSD: number;
+  amountKHR: number | null;
+  currency: 'USD' | 'KHR';
+  expiresAt: string;
+}
+
+interface PaymentCheckResponse {
+  status: 'pending' | 'paid' | 'error' | 'expired';
+  message?: string;
+  retryAfterMs?: number;
+}
+
 export default function AccountPage() {
   const { language } = useLanguage();
   const { user, logout } = useAuth();
@@ -78,8 +94,12 @@ export default function AccountPage() {
   });
   const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
   const [paymentQrCode, setPaymentQrCode] = useState<string | null>(null);
-  const [paymentKhqr, setPaymentKhqr] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error'>('pending');
+  const [paymentKhqr] = useState<string | null>(null);
+  const [paymentMerchantName, setPaymentMerchantName] = useState('');
+  const [paymentExpiresAt, setPaymentExpiresAt] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
+  const [paymentCurrency, setPaymentCurrency] = useState<'USD' | 'KHR'>('USD');
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error' | 'expired'>('pending');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentCheckTick, setPaymentCheckTick] = useState(0);
@@ -107,7 +127,7 @@ export default function AccountPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!paymentOrder || !paymentQrCode || paymentStatus === 'paid') {
+    if (!paymentOrder || !paymentQrCode || paymentStatus === 'paid' || paymentStatus === 'expired') {
       return;
     }
 
@@ -119,13 +139,16 @@ export default function AccountPage() {
         const response = await fetch(`/api/bakong/check-payment?orderId=${paymentOrder._id}`, {
           cache: 'no-store'
         });
-        const data = await response.json();
+        const data: PaymentCheckResponse = await response.json();
 
         if (data.status === 'paid') {
           setPaymentStatus('paid');
           setPaymentMessage(language === 'km'
             ? 'បានទូទាត់ជោគជ័យ'
             : 'Payment confirmed');
+          if (language === 'km') {
+            setPaymentMessage('បានទូទាត់ជោគជ័យ');
+          }
           await fetchOrders();
           if (selectedOrder?._id === paymentOrder._id) {
             setSelectedOrder((prev) => prev ? { ...prev, paymentStatus: 'paid', canPayNow: false } : prev);
@@ -133,10 +156,22 @@ export default function AccountPage() {
           return;
         }
 
+        if (data.status === 'expired') {
+          setPaymentStatus('expired');
+          setPaymentMessage(data.message || (language === 'km'
+            ? 'QR ផុតកំណត់។ សូមបង្កើត QR ថ្មីម្តងទៀត។'
+            : 'QR expired. Generate a new QR to continue.'));
+          return;
+        }
+
         setPaymentStatus(data.status === 'error' ? 'error' : 'pending');
         setPaymentMessage(data.message || (language === 'km'
           ? 'កំពុងរង់ចាំការបញ្ជាក់...'
           : 'Waiting for payment confirmation...'));
+
+        if (language === 'km' && data.status !== 'error' && !data.message) {
+          setPaymentMessage('កំពុងរង់ចាំការបញ្ជាក់ការទូទាត់...');
+        }
 
         const retryAfterMs = Math.max(3000, Number(data.retryAfterMs) || 4000);
         if (!cancelled) {
@@ -147,6 +182,9 @@ export default function AccountPage() {
         setPaymentMessage(language === 'km'
           ? 'បញ្ហាបណ្តាញ។ កំពុងព្យាយាមម្តងទៀត...'
           : 'Network issue. Retrying...');
+        if (language === 'km') {
+          setPaymentMessage('បណ្តាញមានបញ្ហា កំពុងព្យាយាមម្តងទៀត...');
+        }
         if (!cancelled) {
           timeoutId = setTimeout(checkPayment, 7000);
         }
@@ -195,7 +233,10 @@ export default function AccountPage() {
   const closePaymentModal = () => {
     setPaymentOrder(null);
     setPaymentQrCode(null);
-    setPaymentKhqr(null);
+    setPaymentMerchantName('');
+    setPaymentExpiresAt(null);
+    setPaymentAmount(null);
+    setPaymentCurrency('USD');
     setPaymentMessage('');
     setPaymentStatus('pending');
   };
@@ -221,6 +262,13 @@ export default function AccountPage() {
     try {
       setUploadingProfileImage(true);
       setProfileNotice('');
+      const firebaseUser = getFirebaseAuth().currentUser;
+
+      if (!firebaseUser) {
+        throw new Error('Please log in again');
+      }
+
+      const token = await firebaseUser.getIdToken();
 
       const formData = new FormData();
       formData.append('image', file);
@@ -228,6 +276,9 @@ export default function AccountPage() {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+        },
         body: formData,
       });
 
@@ -281,6 +332,32 @@ export default function AccountPage() {
     }
   };
 
+  const formatBakongAmount = (amount: number, currency: 'USD' | 'KHR') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: currency === 'KHR' ? 0 : 2,
+      maximumFractionDigits: currency === 'KHR' ? 0 : 2,
+    }).format(amount);
+  };
+
+  const applyQrResponse = (order: Order, data: BakongQrResponse) => {
+    setPaymentOrder(order);
+    setPaymentQrCode(data.qrCode);
+    setPaymentMerchantName(data.merchantName);
+    setPaymentExpiresAt(data.expiresAt);
+    setPaymentCurrency(data.currency);
+    setPaymentAmount(data.currency === 'KHR' ? Number(data.amountKHR || 0) : Number(data.amountUSD));
+    setPaymentCheckTick((prev) => prev + 1);
+    setPaymentStatus('pending');
+    setPaymentMessage(language === 'km'
+      ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់'
+      : 'Please scan the QR and wait for confirmation');
+    if (language === 'km') {
+      setPaymentMessage('សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់');
+    }
+  };
+
   const handlePayNow = async (order: Order, event?: React.MouseEvent) => {
     event?.stopPropagation();
 
@@ -293,23 +370,23 @@ export default function AccountPage() {
       setPaymentMessage('');
       setPaymentStatus('pending');
 
-      const qrRes = await axios.post('/api/bakong/create-qr', {
+      const qrRes = await axios.post<BakongQrResponse>('/api/bakong/create-qr', {
         orderId: order._id,
         orderNumber: order.orderNumber,
-        amount: order.total
       });
 
       if (!qrRes.data?.qrCode) {
         throw new Error('No QR code in response');
       }
 
-      setPaymentOrder(order);
+      applyQrResponse(order, qrRes.data); /*
       setPaymentQrCode(qrRes.data.qrCode);
       setPaymentKhqr(qrRes.data.khqr || null);
       setPaymentCheckTick((prev) => prev + 1);
       setPaymentMessage(language === 'km'
         ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់'
         : 'Please scan the QR and wait for confirmation');
+      */
     } catch (error) {
       const message = error instanceof AxiosError
         ? (error.response?.data?.error || error.message)
@@ -1055,7 +1132,29 @@ export default function AccountPage() {
         {paymentOrder && paymentQrCode && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/30" onClick={closePaymentModal} />
-            <div className="relative bg-white rounded-lg max-w-sm w-full p-5 text-center">
+            <div className="relative w-full max-w-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className={`font-medium text-gray-900 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{language === 'km' ? 'ការទូទាត់' : 'Payment'}</h3>
+                <button onClick={closePaymentModal} className="p-1 hover:bg-gray-100 rounded">
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+              <BakongKhqrCard
+                amountText={formatBakongAmount(paymentAmount ?? paymentOrder.total, paymentCurrency)}
+                merchantName={paymentMerchantName || 'Bakong Merchant'}
+                qrCode={paymentQrCode}
+                language={language}
+                paymentStatus={paymentStatus}
+                paymentMessage={paymentMessage}
+                expiresAt={paymentExpiresAt}
+                orderNumber={paymentOrder.orderNumber}
+                busy={creatingPayment}
+                onRefreshQr={() => void handlePayNow(paymentOrder)}
+                refreshQrLabel={language === 'km' ? 'បង្កើត QR ថ្មី' : 'Generate new QR'}
+                countdownLabel={language === 'km' ? 'ផុតកំណត់ក្នុង' : 'Expires in'}
+              />
+            </div>
+            <div className="hidden relative bg-white rounded-lg max-w-sm w-full p-5 text-center">
               <div className="flex justify-between items-center mb-3">
                 <h3 className={`font-medium text-gray-900 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{language === 'km' ? 'បង់ប្រាក់' : 'Payment'}</h3>
                 <button onClick={closePaymentModal} className="p-1 hover:bg-gray-100 rounded">
@@ -1066,7 +1165,7 @@ export default function AccountPage() {
               <p className={`text-sm text-gray-500 mb-3 ${language === 'km' ? 'khmer-text' : 'english-text'}`}>{paymentOrder.orderNumber}</p>
 
               <div className="relative w-64 h-64 mx-auto mb-3">
-                <img src={paymentQrCode} alt="Bakong QR" className="w-64 h-64" />
+                <img src={paymentQrCode || ''} alt="Bakong QR" className="w-64 h-64" />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="w-12 h-12 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center">
                     <img src={BAKONG_LOGO_URL} alt="Bakong" className="w-8 h-8 rounded-full" />
@@ -1098,7 +1197,7 @@ export default function AccountPage() {
 
               {paymentKhqr && (
                 <p className="text-[10px] text-gray-400 mt-3 break-all">
-                  KHQR Ref: {paymentKhqr.slice(0, 32)}...
+                  KHQR Ref: {(paymentKhqr || '').slice(0, 32)}...
                 </p>
               )}
             </div>

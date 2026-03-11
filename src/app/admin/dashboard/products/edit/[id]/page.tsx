@@ -32,11 +32,6 @@ export default function EditProduct() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
     fetchProduct();
     fetchCategories();
   }, [params.id]);
@@ -94,12 +89,10 @@ export default function EditProduct() {
     setError('');
 
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/products?id=' + params.id, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify({
           ...formData,
@@ -111,6 +104,8 @@ export default function EditProduct() {
 
       if (res.ok) {
         router.push('/admin/dashboard/products');
+      } else if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to update product');

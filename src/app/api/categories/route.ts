@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Category from '@/models/Category';
+import { verifyAdminRequest } from '@/lib/admin-auth';
+import { enforceSameOrigin } from '@/lib/request-origin';
+import { validateCategoryPayload } from '@/lib/validation';
+import { writeAuditLog } from '@/lib/audit-log';
 
 const slugify = (value: string) =>
   value
@@ -44,18 +48,28 @@ export async function GET(request: Request) {
 // POST create new category
 export async function POST(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const body = await request.json();
-    
-    if (!body.name || !body.nameEn) {
+    const validated = validateCategoryPayload(body);
+    if (!validated.ok) {
       return NextResponse.json(
-        { error: 'Name (Khmer) and Name (English) are required' },
+        { error: validated.error },
         { status: 400 }
       );
     }
     
     await connectDB();
 
-    const baseSlug = slugify(String(body.slug || body.nameEn || body.name || ''));
+    const baseSlug = slugify(String(body.slug || validated.data.nameEn || validated.data.name || ''));
     let slug = baseSlug || `category-${Date.now()}`;
 
     if (baseSlug) {
@@ -67,12 +81,21 @@ export async function POST(request: Request) {
     }
     
     const category = await Category.create({
-      name: body.name.trim(),
-      nameEn: body.nameEn.trim(),
+      name: validated.data.name,
+      nameEn: validated.data.nameEn,
       slug,
-      description: body.description || '',
-      isActive: body.isActive ?? true,
-      order: body.order || 0,
+      description: validated.data.description || '',
+      isActive: validated.data.isActive ?? true,
+      order: validated.data.order || 0,
+    });
+
+    await writeAuditLog({
+      request,
+      action: 'category.create',
+      resourceType: 'category',
+      resourceId: String(category._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: category.nameEn, slug: category.slug },
     });
     
     return NextResponse.json(category, { status: 201 });
@@ -106,9 +129,20 @@ export async function POST(request: Request) {
 // PUT update category
 export async function PUT(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const body = await request.json();
+    const validated = validateCategoryPayload(body, true);
     
     if (!id) {
       return NextResponse.json(
@@ -116,10 +150,16 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
+    if (!validated.ok) {
+      return NextResponse.json(
+        { error: validated.error },
+        { status: 400 }
+      );
+    }
     
     await connectDB();
     
-    const category = await Category.findByIdAndUpdate(id, body, { 
+    const category = await Category.findByIdAndUpdate(id, validated.data, { 
       new: true,
       runValidators: true 
     });
@@ -130,6 +170,15 @@ export async function PUT(request: Request) {
         { status: 404 }
       );
     }
+
+    await writeAuditLog({
+      request,
+      action: 'category.update',
+      resourceType: 'category',
+      resourceId: String(category._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: category.nameEn, slug: category.slug },
+    });
     
     return NextResponse.json(category);
   } catch (error) {
@@ -154,6 +203,16 @@ export async function PUT(request: Request) {
 // DELETE category
 export async function DELETE(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -174,6 +233,15 @@ export async function DELETE(request: Request) {
         { status: 404 }
       );
     }
+
+    await writeAuditLog({
+      request,
+      action: 'category.delete',
+      resourceType: 'category',
+      resourceId: String(category._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: category.nameEn, slug: category.slug },
+    });
     
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {

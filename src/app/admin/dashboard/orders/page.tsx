@@ -38,22 +38,16 @@ export default function OrdersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
     fetchOrders();
   }, []);
 
   const fetchOrders = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const res = await fetch('/api/orders', {
-        headers: {
-          'Authorization': 'Bearer ' + token,
-        },
-      });
+      const res = await fetch('/api/orders');
+      if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
+        return;
+      }
       const data = await res.json();
       setOrders(data);
     } catch (error) {
@@ -65,12 +59,10 @@ export default function OrdersPage() {
 
   const updateOrderStatus = async (orderId: string, status: string, trackingNumber?: string) => {
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/orders?id=' + orderId, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify({ 
           orderStatus: status,
@@ -81,6 +73,8 @@ export default function OrdersPage() {
       if (res.ok) {
         fetchOrders();
         setSelectedOrder(null);
+      } else if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
       }
     } catch (error) {
       console.error('Error:', error);

@@ -2,13 +2,29 @@
 import connectDB from '@/lib/mongodb';
 import Admin from '@/models/Admin';
 import jwt from 'jsonwebtoken';
+import { getClientIp, takeRateLimit } from '@/lib/rate-limit';
+import { ADMIN_SESSION_COOKIE } from '@/lib/admin-auth';
+import { enforceSameOrigin } from '@/lib/request-origin';
+import { writeAuditLog } from '@/lib/audit-log';
 
 export async function POST(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const body = await request.json();
     const { email, password } = body;
-    
-    console.log('Login attempt for email:', email);
+
+    const ip = getClientIp(request);
+    const loginLimit = takeRateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000);
+    if (!loginLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
     
     if (!email || !password) {
       return NextResponse.json(
@@ -22,7 +38,6 @@ export async function POST(request: Request) {
     // Find admin by email
     const admin = await Admin.findOne({ email: email.toLowerCase() });
     if (!admin) {
-      console.log('Admin not found:', email);
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -32,7 +47,6 @@ export async function POST(request: Request) {
     // Check password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
-      console.log('Password mismatch for:', email);
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -51,11 +65,8 @@ export async function POST(request: Request) {
       { expiresIn: '7d' }
     );
     
-    console.log('Login successful for:', email);
-    
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: 'Login successful',
-      token,
       admin: {
         id: admin._id,
         email: admin.email,
@@ -63,6 +74,32 @@ export async function POST(request: Request) {
         role: admin.role,
       },
     });
+
+    response.cookies.set({
+      name: ADMIN_SESSION_COOKIE,
+      value: token,
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+    response.headers.set('Cache-Control', 'no-store');
+
+    await writeAuditLog({
+      request,
+      action: 'admin.login',
+      resourceType: 'admin',
+      resourceId: String(admin._id),
+      admin: {
+        id: String(admin._id),
+        email: admin.email,
+        role: admin.role,
+      },
+      metadata: { email: admin.email },
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

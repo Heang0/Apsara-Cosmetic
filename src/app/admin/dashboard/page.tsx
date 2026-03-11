@@ -15,18 +15,16 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
     fetchStats();
   }, []);
 
   const fetchStats = async () => {
     try {
       const productsRes = await fetch('/api/products');
+      if (productsRes.status === 401 || productsRes.status === 403) {
+        router.push('/admin/login');
+        return;
+      }
       const products = await productsRes.json();
       setStats(prev => ({ ...prev, totalProducts: products.length }));
     } catch (error) {

@@ -47,49 +47,49 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (items.length === 0) return;
 
     try {
-      const updatedItems = await Promise.all(
-        items.map(async (item) => {
-          try {
-            // Fetch latest product data
-            const res = await axios.get(`/api/products?id=${item._id}`);
-            const product = res.data;
+      const productIds = Array.from(new Set(items.map((item) => item._id).filter(Boolean)));
+      const res = await axios.post('/api/cart/validate', { productIds });
+      const products = res.data?.products || {};
 
-            if (!product) {
-              // Product no longer exists - remove from cart
-              return null;
-            }
+      const updatedItems: Array<CartItem | null> = items.map((item) => {
+        const product = products[item._id];
 
-            // Check if price changed
-            const currentPrice = product.isOnSale && product.salePrice 
-              ? product.salePrice 
-              : product.price;
+        if (!product) {
+          return null;
+        }
 
-            // If price changed, update with new price
-            if (currentPrice !== item.price) {
-              return {
-                ...item,
-                name: product.name,
-                nameEn: product.nameEn,
-                price: currentPrice,
-                image: product.images?.[0] || item.image,
-                slug: product.slug,
-              };
-            }
+        const currentPrice = product.price;
+        const maxStock = Number(product.stock);
+        const nextQuantity = Number.isFinite(maxStock) && maxStock > 0
+          ? Math.min(item.quantity, maxStock)
+          : item.quantity;
 
-            // Product exists and price same - keep as is
-            return item;
-          } catch (error) {
-            // Product not found or error - remove from cart
-            console.error('Error validating cart item:', error);
-            return null;
-          }
-        })
-      );
+        return {
+          ...item,
+          name: product.name,
+          nameEn: product.nameEn,
+          price: currentPrice,
+          quantity: nextQuantity,
+          image: product.images?.[0] || item.image,
+          slug: product.slug,
+        };
+      });
 
       // Filter out null items (deleted products)
       const validItems = updatedItems.filter((item): item is CartItem => item !== null);
       
-      if (validItems.length !== items.length) {
+      const changed = validItems.length !== items.length || validItems.some((item, index) => {
+        const current = items[index];
+        return !current
+          || current.price !== item.price
+          || current.quantity !== item.quantity
+          || current.name !== item.name
+          || current.nameEn !== item.nameEn
+          || current.image !== item.image
+          || current.slug !== item.slug;
+      });
+
+      if (changed) {
         setItems(validItems);
       }
     } catch (error) {

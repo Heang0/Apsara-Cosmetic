@@ -24,17 +24,16 @@ export default function AdminProducts() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products');
+      if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
+        return;
+      }
       const data = await res.json();
       setProducts(data);
     } catch (error) {
@@ -48,14 +47,14 @@ export default function AdminProducts() {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/products?id=' + id, {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + token },
       });
 
       if (res.ok) {
         setProducts(products.filter(p => p._id !== id));
+      } else if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
       }
     } catch (error) {
       console.error('Error:', error);

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import { verifyAdminRequest } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
   try {
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     await connectDB();
     
     // Get all orders to extract unique customers

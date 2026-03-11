@@ -50,12 +50,10 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
 
   const addCategory = async (categoryData: Omit<Category, '_id' | 'slug'>) => {
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify(categoryData),
       });
@@ -70,12 +68,10 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
 
   const updateCategory = async (id: string, data: Partial<Category>) => {
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch(`/api/categories?id=${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify(data),
       });
@@ -90,12 +86,8 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
 
   const deleteCategory = async (id: string) => {
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch(`/api/categories?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-        },
       });
       
       if (res.ok) {

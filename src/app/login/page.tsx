@@ -7,15 +7,17 @@ import Layout from '@/components/Layout';
 import { useLanguage } from '@/context/LanguageContext';
 import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import TelegramLogin from '@/components/TelegramLogin';
-import { getFirebaseAuth } from '@/lib/firebase';
+import { getFirebaseAuth, hasFirebaseClientConfig } from '@/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   sendPasswordResetEmail,
   updateProfile,
-  onAuthStateChanged
+  onAuthStateChanged,
+  getRedirectResult
 } from 'firebase/auth';
 
 export default function LoginPage() {
@@ -34,11 +36,63 @@ export default function LoginPage() {
     phone: '',
   });
 
+  const getFriendlyAuthError = (err: any) => {
+    switch (err?.code) {
+      case 'auth/popup-closed-by-user':
+        return language === 'km'
+          ? 'អ្នកបានបិទផ្ទាំង Google មុនពេលចូលសម្រេច។ សូមព្យាយាមម្តងទៀត។'
+          : 'The Google sign-in window was closed before login completed. Please try again.';
+      case 'auth/popup-blocked':
+        return language === 'km'
+          ? 'Browser បានបិទ popup។ សូមអនុញ្ញាត popup សម្រាប់វេបសាយនេះ។'
+          : 'Your browser blocked the sign-in popup. Please allow popups for this site.';
+      case 'auth/cancelled-popup-request':
+        return language === 'km'
+          ? 'សំណើចូល Google មួយផ្សេងទៀតកំពុងដំណើរការ។'
+          : 'Another Google sign-in request is already in progress.';
+      case 'auth/unauthorized-domain':
+        return language === 'km'
+          ? 'Domain នេះមិនទាន់បានអនុញ្ញាតក្នុង Firebase Authentication ទេ។'
+          : 'This domain is not authorized in Firebase Authentication.';
+      case 'auth/operation-not-allowed':
+        return language === 'km'
+          ? 'Google sign-in មិនទាន់បានបើកក្នុង Firebase console ទេ។'
+          : 'Google sign-in is not enabled in Firebase console.';
+      default:
+        return err?.message || 'Authentication failed';
+    }
+  };
+
+  const shouldUseRedirectForGoogleLogin = () => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const ua = window.navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+    const isMobile = isIOS || isAndroid || window.innerWidth < 768;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+
+    return isMobile || isSafari;
+  };
+
   // Check if user is already logged in
   useEffect(() => {
     let unsubscribe = () => { };
+    if (!hasFirebaseClientConfig()) {
+      setError('Firebase client configuration is missing.');
+      return () => {};
+    }
+
     try {
       const firebaseAuth = getFirebaseAuth();
+
+      void getRedirectResult(firebaseAuth).catch((err) => {
+        console.error('Google redirect login error:', err);
+        setError(getFriendlyAuthError(err));
+      });
+
       unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
         if (user) {
           router.push('/account');
@@ -80,12 +134,22 @@ export default function LoginPage() {
     setError('');
 
     try {
+      if (!hasFirebaseClientConfig()) {
+        throw new Error('Firebase client configuration is missing.');
+      }
+
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const firebaseAuth = getFirebaseAuth();
+      if (shouldUseRedirectForGoogleLogin()) {
+        await signInWithRedirect(firebaseAuth, provider);
+        return;
+      }
+
       await signInWithPopup(firebaseAuth, provider);
     } catch (err: any) {
       console.error('Google login error:', err);
-      setError(err.message);
+      setError(getFriendlyAuthError(err));
     } finally {
       setLoading(false);
     }

@@ -1,46 +1,88 @@
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
+import { verifyAdminRequest, getBearerTokenFromRequest } from '@/lib/admin-auth';
+import { getFirebaseAdminAuth } from '@/lib/firebase-admin';
+import { getClientIp, takeRateLimit } from '@/lib/rate-limit';
+import { enforceSameOrigin } from '@/lib/request-origin';
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Define the expected upload result type
 interface CloudinaryUploadResult {
   secure_url: string;
   public_id: string;
   [key: string]: any;
 }
 
-// Increase body size limit for large images - using Next.js 16+ method
-export const maxDuration = 30; // 30 seconds timeout
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
-    console.log('📤 Upload API called');
-    
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const ip = getClientIp(request);
+    const uploadLimit = takeRateLimit(`upload:${ip}`, 20, 10 * 60 * 1000);
+    if (!uploadLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many uploads. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const formData = await request.formData();
-    const file = formData.get('image') as File;
+    const file = formData.get('image') as File | null;
     const kind = String(formData.get('kind') || 'product').toLowerCase();
-    
+
     if (!file) {
-      console.error('❌ No image file provided');
       return NextResponse.json(
         { error: 'No image file provided' },
         { status: 400 }
       );
     }
 
-    console.log('📁 File received:', file.name, 'size:', file.size, 'type:', file.type);
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    const maxSize = kind === 'profile' ? 5 * 1024 * 1024 : 8 * 1024 * 1024;
 
-    // Convert file to buffer
+    if (!allowedTypes.has(file.type)) {
+      return NextResponse.json(
+        { error: 'Unsupported file type' },
+        { status: 400 }
+      );
+    }
+
+    if (file.size <= 0 || file.size > maxSize) {
+      return NextResponse.json(
+        { error: `Image must be smaller than ${kind === 'profile' ? '5MB' : '8MB'}` },
+        { status: 400 }
+      );
+    }
+
+    if (kind === 'profile') {
+      const token = getBearerTokenFromRequest(request);
+      if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      try {
+        await getFirebaseAdminAuth().verifyIdToken(token);
+      } catch {
+        return NextResponse.json({ error: 'Invalid user token' }, { status: 401 });
+      }
+    } else {
+      const adminAuth = verifyAdminRequest(request);
+      if (!adminAuth.ok) {
+        return adminAuth.response;
+      }
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
-    console.log('📦 Buffer created, size:', buffer.length);
 
     const uploadOptions = kind === 'profile'
       ? {
@@ -60,17 +102,14 @@ export async function POST(request: Request) {
           ],
         };
 
-    // Upload to Cloudinary with optimization
     const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         uploadOptions,
-        (error, result) => {
+        (error, uploadResult) => {
           if (error) {
-            console.error('❌ Cloudinary upload error:', error);
             reject(error);
           } else {
-            console.log('✅ Cloudinary upload success:', result?.secure_url);
-            resolve(result as CloudinaryUploadResult);
+            resolve(uploadResult as CloudinaryUploadResult);
           }
         }
       );
@@ -84,7 +123,7 @@ export async function POST(request: Request) {
       publicId: result.public_id,
     });
   } catch (error) {
-    console.error('❌ Upload error:', error);
+    console.error('Upload error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
       { error: 'Failed to upload image: ' + errorMessage },

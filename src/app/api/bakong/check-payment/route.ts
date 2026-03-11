@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { sendOrderConfirmationToUser, sendOrderNotification } from '@/lib/telegram';
+import { sendAdminNotification, sendOrderReceipt } from '@/lib/email';
 
 const cleanEnvValue = (value?: string) => {
   if (!value) return '';
@@ -41,6 +42,15 @@ export async function GET(request: Request) {
 
     if (order.paymentStatus === 'paid') {
       return NextResponse.json({ status: 'paid' });
+    }
+
+    const expiresAt = order.bakongExpiresAt ? new Date(order.bakongExpiresAt).getTime() : 0;
+    if (expiresAt && Date.now() > expiresAt) {
+      return NextResponse.json({
+        status: 'expired',
+        retryAfterMs: 0,
+        message: 'QR expired. Generate a new QR to continue.'
+      });
     }
 
     const md5 = String(order.bakongTransactionId || '').trim();
@@ -83,6 +93,13 @@ export async function GET(request: Request) {
         order.orderStatus = 'processing';
       }
       await order.save();
+
+      void sendOrderReceipt(order, String(order.customer?.email || '')).catch((emailError) => {
+        console.error('Failed to send customer payment receipt email:', emailError);
+      });
+      void sendAdminNotification(order).catch((emailError) => {
+        console.error('Failed to send admin payment notification email:', emailError);
+      });
 
       if (order.telegramChatId) {
         void sendOrderConfirmationToUser(order, String(order.telegramChatId)).catch((telegramError) => {

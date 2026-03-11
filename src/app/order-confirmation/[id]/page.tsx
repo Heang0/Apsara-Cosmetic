@@ -63,14 +63,14 @@ export default function OrderConfirmation() {
       <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
         <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
           <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h1 className="khmer-text text-2xl font-bold mb-2">{title}</h1>
-          <p className="english-text text-gray-500 mb-6">{message}</p>
+          <h1 className={language === 'km' ? 'khmer-text text-2xl font-bold mb-2' : 'english-text text-2xl font-bold mb-2'}>{title}</h1>
+          <p className={language === 'km' ? 'khmer-text text-gray-500 mb-6' : 'english-text text-gray-500 mb-6'}>{message}</p>
           
           <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-            <p className="text-sm text-gray-500 mb-1">{orderNumberText}</p>
+            <p className={language === 'km' ? 'khmer-text text-sm text-gray-500 mb-1' : 'english-text text-sm text-gray-500 mb-1'}>{orderNumberText}</p>
             <p className="english-text font-medium mb-4">{order?.orderNumber}</p>
             
-            <p className="text-sm text-gray-500 mb-1">{totalText}</p>
+            <p className={language === 'km' ? 'khmer-text text-sm text-gray-500 mb-1' : 'english-text text-sm text-gray-500 mb-1'}>{totalText}</p>
             <p className="english-text text-xl font-bold">{formatPrice(order?.total || 0)}</p>
           </div>
 

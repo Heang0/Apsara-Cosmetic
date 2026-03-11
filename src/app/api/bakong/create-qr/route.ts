@@ -1,39 +1,34 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import QRCode from 'qrcode';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import { BAKONG_QR_TTL_MS } from '@/lib/bakong-payment';
+import { enforceSameOrigin } from '@/lib/request-origin';
 
 const cleanEnvValue = (value?: string) => {
   if (!value) return '';
   return String(value).trim().replace(/^['"]|['"]$/g, '');
 };
 
-const buildQrImageUrl = (khqrString: string) => {
-  return [
-    'https://quickchart.io/qr',
-    '?size=320',
-    '&ecLevel=M',
-    '&margin=2',
-    `&text=${encodeURIComponent(khqrString)}`
-  ].join('');
-};
-
 export async function POST(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const body = await request.json();
 
-    const amount = Number(body?.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const orderIdRaw = String(body?.orderId || '').trim();
+    if (!orderIdRaw || !mongoose.Types.ObjectId.isValid(orderIdRaw)) {
       return NextResponse.json(
-        { error: 'Invalid amount' },
+        { error: 'Valid orderId is required' },
         { status: 400 }
       );
     }
 
-    const orderIdRaw = String(body?.orderId || '').trim();
-    const orderId = orderIdRaw || '';
-    const orderNumberRaw = String(body?.orderNumber || body?.billNumber || '').trim();
-    const billNumber = (orderNumberRaw || orderIdRaw || `ORDER-${Date.now()}`).slice(0, 25);
+    const orderId = orderIdRaw;
 
     const bakongAccountId = cleanEnvValue(process.env.BAKONG_ACCOUNT_ID);
     const merchantName = cleanEnvValue(process.env.BAKONG_MERCHANT_NAME);
@@ -51,13 +46,47 @@ export async function POST(request: Request) {
       );
     }
 
+    await connectDB();
+    const order = await Order.findById(orderId).select('total orderNumber paymentStatus orderStatus');
+
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+
+    if (order.paymentStatus === 'paid') {
+      return NextResponse.json(
+        { error: 'Order is already paid' },
+        { status: 409 }
+      );
+    }
+
+    if (order.orderStatus === 'cancelled') {
+      return NextResponse.json(
+        { error: 'Order is no longer payable' },
+        { status: 410 }
+      );
+    }
+
+    const amount = Number(order.total);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json(
+        { error: 'Order total is invalid' },
+        { status: 400 }
+      );
+    }
+
+    const billNumber = String(order.orderNumber || body?.orderNumber || `ORDER-${Date.now()}`).slice(0, 25);
+
     const { BakongKHQR, IndividualInfo, khqrData } = await import('bakong-khqr');
     const khqr = new BakongKHQR();
 
     const khqrAmount = isUSD
       ? Number(amount.toFixed(2))
       : Math.round(amount * exchangeRate);
-    const expiresAtMs = Date.now() + (15 * 60 * 1000);
+    const expiresAtMs = Date.now() + BAKONG_QR_TTL_MS;
 
     const optionalData = {
       currency: isUSD ? khqrData.currency.usd : khqrData.currency.khr,
@@ -87,20 +116,26 @@ export async function POST(request: Request) {
 
     const khqrString = khqrResponse.data.qr;
     const md5 = khqrResponse.data.md5;
+    const qrCode = await QRCode.toDataURL(khqrString, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 320,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
 
-    // Persist MD5 reference for dynamic payment-status checks.
-    if (orderId && mongoose.Types.ObjectId.isValid(orderId)) {
-      await connectDB();
-      await Order.findByIdAndUpdate(orderId, {
-        bakongTransactionId: md5,
-        bakongQrCode: khqrString
-      });
-    }
+    await Order.findByIdAndUpdate(orderId, {
+      bakongTransactionId: md5,
+      bakongQrCode: khqrString,
+      bakongExpiresAt: new Date(expiresAtMs)
+    });
 
     return NextResponse.json({
-      qrCode: buildQrImageUrl(khqrString),
-      khqr: khqrString,
+      qrCode,
       md5,
+      merchantName,
       amountUSD: Number(amount.toFixed(2)),
       amountKHR: isUSD ? null : khqrAmount,
       currency: isUSD ? 'USD' : 'KHR',

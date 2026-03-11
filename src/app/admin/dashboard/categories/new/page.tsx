@@ -21,18 +21,18 @@ export default function NewCategory() {
     setError('');
 
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify(formData),
       });
 
       if (res.ok) {
         router.push('/admin/dashboard/categories');
+      } else if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to create category');

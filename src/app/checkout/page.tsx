@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
+import BakongKhqrCard from '@/components/BakongKhqrCard';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -29,9 +30,18 @@ interface Address {
 }
 
 interface PaymentCheckResponse {
-  status: 'pending' | 'paid' | 'error';
+  status: 'pending' | 'paid' | 'error' | 'expired';
   message?: string;
   retryAfterMs?: number;
+}
+
+interface BakongQrResponse {
+  qrCode: string;
+  merchantName: string;
+  amountUSD: number;
+  amountKHR: number | null;
+  currency: 'USD' | 'KHR';
+  expiresAt: string;
 }
 
 export default function CheckoutPage() {
@@ -41,12 +51,17 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart, validateCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
-  const [khqrRaw, setKhqrRaw] = useState<string | null>(null);
+  const [khqrRaw] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error'>('pending');
+  const [paymentMerchantName, setPaymentMerchantName] = useState('');
+  const [paymentExpiresAt, setPaymentExpiresAt] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
+  const [paymentCurrency, setPaymentCurrency] = useState<'USD' | 'KHR'>('USD');
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'error' | 'expired'>('pending');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentCheckTick, setPaymentCheckTick] = useState(0);
+  const [refreshingQr, setRefreshingQr] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -68,7 +83,6 @@ export default function CheckoutPage() {
     isDefault: false,
   });
   const BAKONG_LOGO_URL = 'https://bakong.nbc.gov.kh/images/favicon.png';
-
   // Load saved addresses
   useEffect(() => {
     if (!user) {
@@ -112,7 +126,7 @@ export default function CheckoutPage() {
   }, [items, router]);
 
   useEffect(() => {
-    if (!orderId || !qrCode || paymentStatus === 'paid') {
+    if (!orderId || !qrCode || paymentStatus === 'paid' || paymentStatus === 'expired') {
       return;
     }
 
@@ -131,6 +145,9 @@ export default function CheckoutPage() {
           setPaymentMessage(language === 'km'
             ? 'បានបញ្ជាក់ការបង់ប្រាក់ដោយស្វ័យប្រវត្តិ'
             : 'Payment confirmed automatically');
+          if (language === 'km') {
+            setPaymentMessage('បានបញ្ជាក់ការបង់ប្រាក់ដោយស្វ័យប្រវត្តិ');
+          }
           clearCart();
           sessionStorage.removeItem('checkoutItems');
           setTimeout(() => {
@@ -139,14 +156,28 @@ export default function CheckoutPage() {
           return;
         }
 
+        if (data.status === 'expired') {
+          setPaymentStatus('expired');
+          setPaymentMessage(data.message || (language === 'km'
+            ? 'QR ផុតកំណត់។ សូមបង្កើត QR ថ្មីម្តងទៀត។'
+            : 'QR expired. Generate a new QR to continue.'));
+          return;
+        }
+
         if (data.status === 'error') {
           setPaymentStatus('error');
-          setPaymentMessage(data.message || 'Payment check failed. Retrying...');
+          setPaymentMessage(data.message || (language === 'km'
+            ? 'ការពិនិត្យការបង់ប្រាក់បរាជ័យ កំពុងព្យាយាមម្តងទៀត...'
+            : 'Payment check failed. Retrying...'));
         } else {
           setPaymentStatus('pending');
           setPaymentMessage(data.message || (language === 'km'
             ? 'កំពុងរង់ចាំការបញ្ជាក់ការបង់ប្រាក់...'
             : 'Waiting for payment confirmation...'));
+        }
+
+        if (language === 'km' && data.status !== 'error' && !data.message) {
+          setPaymentMessage('កំពុងរង់ចាំការបញ្ជាក់ការបង់ប្រាក់...');
         }
 
         const nextDelay = Math.max(3000, Number(data.retryAfterMs) || 4000);
@@ -158,6 +189,9 @@ export default function CheckoutPage() {
         setPaymentMessage(language === 'km'
           ? 'បណ្តាញត្រួតពិនិត្យការបង់ប្រាក់មានបញ្ហា, កំពុងព្យាយាមម្តងទៀត...'
           : 'Payment verification network issue, retrying...');
+        if (language === 'km') {
+          setPaymentMessage('បណ្តាញពិនិត្យការបង់ប្រាក់មានបញ្ហា កំពុងព្យាយាមម្តងទៀត...');
+        }
         if (!cancelled) {
           timeoutId = setTimeout(checkPayment, 7000);
         }
@@ -242,6 +276,46 @@ export default function CheckoutPage() {
   const subtotal = totalPrice;
   const total = subtotal + shippingFee;
 
+  const formatBakongAmount = (amount: number, currency: 'USD' | 'KHR') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: currency === 'KHR' ? 0 : 2,
+      maximumFractionDigits: currency === 'KHR' ? 0 : 2,
+    }).format(amount);
+  };
+
+  const applyQrResponse = (data: BakongQrResponse) => {
+    setQrCode(data.qrCode);
+    setPaymentMerchantName(data.merchantName);
+    setPaymentExpiresAt(data.expiresAt);
+    setPaymentCurrency(data.currency);
+    setPaymentAmount(data.currency === 'KHR' ? Number(data.amountKHR || 0) : Number(data.amountUSD));
+    setPaymentStatus('pending');
+    setPaymentMessage(language === 'km'
+      ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់ស្វ័យប្រវត្តិ'
+      : 'Please scan the QR and wait for automatic confirmation');
+    if (language === 'km') {
+      setPaymentMessage('សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់ដោយស្វ័យប្រវត្តិ');
+    } /*
+      ? 'ážŸáž¼áž˜ážŸáŸ’áž€áŸáž“ QR áž áž¾áž™ážšáž„áŸ‹áž…áž¶áŸ†áž€áž¶ážšაჟ”აჟ‰ាŸ’ეჟ‡ეჟ¶ា€Ÿ‹აჟŸាŸ’ավាយ្ប្រាវត្តិ'
+      : 'Please scan the QR and wait for automatic confirmation');
+    */
+  };
+
+  const requestPaymentQr = async (currentOrderId: string, currentOrderNumber?: string | null) => {
+    const qrRes = await axios.post<BakongQrResponse>('/api/bakong/create-qr', {
+      orderId: currentOrderId,
+      orderNumber: currentOrderNumber || undefined,
+    });
+
+    if (!qrRes.data?.qrCode) {
+      throw new Error('No QR code in response');
+    }
+
+    applyQrResponse(qrRes.data);
+  };
+
   const generateOrderNumber = () => {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
@@ -315,18 +389,9 @@ export default function CheckoutPage() {
       setOrderId(order._id);
       setOrderNumber(order.orderNumber);
 
-      const qrRes = await axios.post('/api/bakong/create-qr', {
-        amount: total,
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        customerName: formData.name,
-      });
+      await requestPaymentQr(order._id, order.orderNumber);
 
-      if (qrRes.data.qrCode) {
-        setQrCode(qrRes.data.qrCode);
-        setKhqrRaw(qrRes.data.khqr || null);
-        setPaymentStatus('pending');
-        setPaymentMessage(language === 'km'
+      setLoading(false); /*
           ? 'សូមស្កេន QR ហើយរង់ចាំការបញ្ជាក់ស្វ័យប្រវត្តិ'
           : 'Please scan the QR and wait for automatic confirmation');
         setLoading(false);
@@ -334,6 +399,7 @@ export default function CheckoutPage() {
         throw new Error('No QR code in response');
       }
 
+      */
     } catch (error) {
       console.error('Checkout error:', error);
 
@@ -361,7 +427,53 @@ export default function CheckoutPage() {
     }).format(price);
   };
 
+  const handleRefreshQr = async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setRefreshingQr(true);
+      await requestPaymentQr(orderId, orderNumber);
+      setPaymentCheckTick((prev) => prev + 1);
+    } catch (error) {
+      const errorMessage = error instanceof AxiosError
+        ? (error.response?.data?.error || error.message)
+        : (error instanceof Error ? error.message : 'Failed to refresh payment QR');
+      setPaymentStatus('error');
+      setPaymentMessage(errorMessage);
+    } finally {
+      setRefreshingQr(false);
+    }
+  };
+
   if (qrCode) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
+          <div className="mb-6 text-center">
+            <h1 className={language === 'km' ? 'khmer-text text-2xl font-bold mb-4' : 'english-text text-2xl font-bold mb-4'}>
+              {language === 'km' ? 'ស្កេន QR ដើម្បីបង់ប្រាក់' : 'Scan QR to Pay'}
+            </h1>
+          </div>
+          <BakongKhqrCard
+            amountText={formatBakongAmount(paymentAmount ?? total, paymentCurrency)}
+            merchantName={paymentMerchantName || 'Bakong Merchant'}
+            qrCode={qrCode}
+            language={language}
+            paymentStatus={paymentStatus}
+            paymentMessage={paymentMessage}
+            expiresAt={paymentExpiresAt}
+            orderNumber={orderNumber}
+            busy={refreshingQr}
+            onRefreshQr={() => void handleRefreshQr()}
+            refreshQrLabel={language === 'km' ? 'បង្កើត QR ថ្មី' : 'Generate new QR'}
+            countdownLabel={language === 'km' ? 'ផុតកំណត់ក្នុង' : 'Expires in'}
+          />
+        </div>
+      </Layout>
+    );
+
     return (
       <Layout>
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
@@ -372,7 +484,7 @@ export default function CheckoutPage() {
             <div className="bg-gray-50 p-4 rounded-lg inline-block mb-4">
               <div className="relative w-64 h-64 mx-auto">
                 <img
-                  src={qrCode}
+                  src={qrCode || ''}
                   alt="Bakong QR"
                   className="w-64 h-64 mx-auto"
                 />
@@ -409,7 +521,7 @@ export default function CheckoutPage() {
             </button>
             {khqrRaw && (
               <p className="text-[11px] text-gray-400 mt-3 break-all">
-                KHQR Ref: {khqrRaw.slice(0, 36)}...
+                KHQR Ref: {(khqrRaw || '').slice(0, 36)}...
               </p>
             )}
           </div>

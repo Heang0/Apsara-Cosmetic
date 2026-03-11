@@ -20,17 +20,16 @@ export default function CategoriesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
     fetchCategories();
   }, []);
 
   const fetchCategories = async () => {
     try {
       const res = await fetch('/api/categories');
+      if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
+        return;
+      }
       const data = await res.json();
       
       // Get product counts
@@ -58,14 +57,14 @@ export default function CategoriesPage() {
     if (!confirm('តើអ្នកប្រាកដថាចង់លុបប្រភេទនេះទេ?')) return;
 
     try {
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/categories?id=' + id, {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + token },
       });
 
       if (res.ok) {
         setCategories(categories.filter(c => c._id !== id));
+      } else if (res.status === 401 || res.status === 403) {
+        router.push('/admin/login');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -74,15 +73,18 @@ export default function CategoriesPage() {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      await fetch('/api/categories?id=' + id, {
+      const response = await fetch('/api/categories?id=' + id, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
         },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
+
+      if (response.status === 401 || response.status === 403) {
+        router.push('/admin/login');
+        return;
+      }
 
       setCategories(categories.map(c => 
         c._id === id ? { ...c, isActive: !currentStatus } : c

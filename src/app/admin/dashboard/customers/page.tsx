@@ -39,12 +39,11 @@ export default function CustomersPage() {
 
   const fetchCustomers = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const res = await fetch('/api/customers', {
-        headers: {
-          'Authorization': 'Bearer ' + token,
-        },
-      });
+      const res = await fetch('/api/customers');
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = '/admin/login';
+        return;
+      }
       const data = await res.json();
       setCustomers(data);
       setFilteredCustomers(data);

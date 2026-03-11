@@ -30,6 +30,7 @@ const orderSchema = new mongoose.Schema({
   orderStatus: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
   bakongTransactionId: String,
   bakongQrCode: String,
+  bakongExpiresAt: Date,
   notes: String,
   telegramChatId: String,
   createdAt: { type: Date, default: Date.now },

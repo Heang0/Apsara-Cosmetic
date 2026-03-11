@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import { verifyAdminRequest } from '@/lib/admin-auth';
+import { enforceSameOrigin } from '@/lib/request-origin';
+import { validateProductPayload } from '@/lib/validation';
+import { writeAuditLog } from '@/lib/audit-log';
 
 // GET - Public with optional filters
 export async function GET(request: Request) {
@@ -54,10 +58,24 @@ export async function GET(request: Request) {
 // POST - Create new product
 export async function POST(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const body = await request.json();
+    const validated = validateProductPayload(body);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
     await connectDB();
     
-    let slug = body.nameEn
+    let slug = validated.data.nameEn
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
@@ -65,7 +83,7 @@ export async function POST(request: Request) {
     let existingProduct = await Product.findOne({ slug });
     let counter = 1;
     while (existingProduct) {
-      slug = body.nameEn.toLowerCase()
+      slug = validated.data.nameEn.toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '') + counter;
       existingProduct = await Product.findOne({ slug });
@@ -73,18 +91,27 @@ export async function POST(request: Request) {
     }
     
     const product = await Product.create({
-      name: body.name,
-      nameEn: body.nameEn,
+      name: validated.data.name,
+      nameEn: validated.data.nameEn,
       slug: slug,
-      description: body.description || '',
-      price: parseFloat(body.price),
-      category: body.category,
-      categoryEn: body.categoryEn,
-      images: body.images || [],
-      stock: parseInt(body.stock) || 0,
-      isOnSale: body.isOnSale || false,
-      salePrice: body.salePrice ? parseFloat(body.salePrice) : undefined,
+      description: validated.data.description,
+      price: validated.data.price,
+      category: validated.data.category,
+      categoryEn: validated.data.categoryEn,
+      images: validated.data.images,
+      stock: validated.data.stock,
+      isOnSale: validated.data.isOnSale,
+      salePrice: validated.data.salePrice,
       createdAt: new Date(),
+    });
+
+    await writeAuditLog({
+      request,
+      action: 'product.create',
+      resourceType: 'product',
+      resourceId: String(product._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: product.nameEn, categoryEn: product.categoryEn },
     });
     
     return NextResponse.json(product, { status: 201 });
@@ -101,15 +128,29 @@ export async function POST(request: Request) {
 // PUT - Update product
 export async function PUT(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const body = await request.json();
+    const validated = validateProductPayload(body);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
 
     await connectDB();
     
     const product = await Product.findByIdAndUpdate(
       id,
-      { ...body, updatedAt: new Date() },
+      { ...validated.data, updatedAt: new Date() },
       { new: true }
     );
 
@@ -119,6 +160,15 @@ export async function PUT(request: Request) {
         { status: 404 }
       );
     }
+
+    await writeAuditLog({
+      request,
+      action: 'product.update',
+      resourceType: 'product',
+      resourceId: String(product._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: product.nameEn, categoryEn: product.categoryEn },
+    });
 
     return NextResponse.json(product);
   } catch (error) {
@@ -134,6 +184,16 @@ export async function PUT(request: Request) {
 // DELETE - Delete product
 export async function DELETE(request: Request) {
   try {
+    const originError = enforceSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
+    const adminAuth = verifyAdminRequest(request);
+    if (!adminAuth.ok) {
+      return adminAuth.response;
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -154,6 +214,15 @@ export async function DELETE(request: Request) {
         { status: 404 }
       );
     }
+
+    await writeAuditLog({
+      request,
+      action: 'product.delete',
+      resourceType: 'product',
+      resourceId: String(product._id),
+      admin: adminAuth.admin,
+      metadata: { nameEn: product.nameEn },
+    });
     
     return NextResponse.json({ message: 'Product deleted successfully' });
   } catch (error) {

@@ -149,8 +149,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
           <p className={language === 'km' ? 'khmer-text' : 'english-text'}>
             {language === 'km'
-              ? '© 2024 អប្សរា រក្សាសិទ្ធិគ្រប់យ៉ាង'
-              : '© 2024 Apsara. All rights reserved.'
+              ? '© 2026 អប្សរា រក្សាសិទ្ធិគ្រប់យ៉ាង'
+              : '© 2026 Apsara. All rights reserved.'
             }
           </p>
         </div>
