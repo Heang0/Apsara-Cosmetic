@@ -18,10 +18,10 @@ interface ProductCardProps {
   };
 }
 
-const getOptimizedImage = (url: string, width: number = 300) => {
+const getOptimizedImage = (url: string, width: number = 600) => {
   if (!url) return '';
   if (url.includes('cloudinary')) {
-    // Optimized Cloudinary URL: good quality, auto format, proper size
+    // Optimized Cloudinary URL: high quality, auto format, proper size
     return url.replace('/upload/', '/upload/w_' + width + ',h_' + width + ',c_fill,q_auto:good,f_auto,dpr_1/');
   }
   return url;
@@ -62,13 +62,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="relative w-full h-full overflow-hidden">
           {mainImage ? (
             <img
-              src={getOptimizedImage(mainImage, 300)}
+              src={getOptimizedImage(mainImage, 600)}
               alt={productName}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               loading="lazy"
               decoding="async"
-              width="300"
-              height="300"
+              width="600"
+              height="600"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
