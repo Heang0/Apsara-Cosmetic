@@ -122,11 +122,11 @@ export default function BakongKhqrCard({
 
       <div className="mx-auto w-full max-w-[380px] rounded-[34px] bg-[#f3f4f6] p-2 shadow-[0_28px_70px_rgba(0,0,0,0.18)]">
         <div className="overflow-hidden rounded-[30px]">
-        <div className="flex h-[70px] items-center justify-center rounded-t-[30px] bg-[#E1232E] px-6">
+        <div className="flex h-[58px] items-center justify-center rounded-t-[30px] bg-[#E1232E] px-6">
           <img
             src={KHQR_HEADER_LOGO_SRC}
             alt="KHQR"
-            className="h-8 w-auto object-contain"
+            className="h-6 w-auto object-contain"
           />
         </div>
 
