@@ -20,13 +20,13 @@ export default function AboutPage() {
 
   const title = language === 'km' ? 'អំពីយើង' : 'About Us';
   const subtitle = language === 'km'
-    ? 'ស្វែងយល់ពីរឿងរ៉ាវរបស់អប្សរា'
-    : 'Discover the story behind Apsara';
+    ? 'ស្វែងយល់ពីរឿងរ៉ាវរបស់គ្លូមី'
+    : 'Discover the story behind Glowme';
 
   const storyTitle = language === 'km' ? 'រឿងរ៉ាវរបស់យើង' : 'Our Story';
   const storyText1 = language === 'km'
-    ? 'អប្សរា បានចាប់ផ្តើមពីក្តីស្រមៃចង់ថែរក្សា និងផ្សព្វផ្សាយនូវសម្រស់បែបប្រពៃណីខ្មែរ។ យើងជឿជាក់ថា សម្រស់ពិតប្រាកដកើតចេញពីធម្មជាតិ និងប្រពៃណីដ៏ល្អប្រណិតរបស់ខ្មែរ។'
-    : 'Apsara began with a dream to preserve and promote traditional Khmer beauty. We believe that true beauty comes from nature and the exquisite traditions of Cambodia.';
+    ? 'គ្លូមី បានចាប់ផ្តើមពីក្តីស្រមៃចង់ថែរក្សា និងផ្សព្វផ្សាយនូវសម្រស់បែបប្រពៃណីខ្មែរ។ យើងជឿជាក់ថា សម្រស់ពិតប្រាកដកើតចេញពីធម្មជាតិ និងប្រពៃណីដ៏ល្អប្រណិតរបស់ខ្មែរ។'
+    : 'Glowme began with a dream to preserve and promote traditional Khmer beauty. We believe that true beauty comes from nature and the exquisite traditions of Cambodia.';
 
   const storyText2 = language === 'km'
     ? 'យើងប្រើប្រាស់គ្រឿងផ្សំធម្មជាតិសុទ្ធសាធ ដែលប្រមូលផ្តុំពីគ្រប់តំបន់ទូទាំងប្រទេសកម្ពុជា ដោយរួមបញ្ចូលជាមួយនឹងបច្ចេកវិទ្យាទំនើប ដើម្បីបង្កើតផលិតផលដែលមានគុណភាពខ្ពស់ និងមានសុវត្ថិភាពសម្រាប់អ្នកប្រើប្រាស់។'
@@ -118,7 +118,7 @@ export default function AboutPage() {
             <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden mt-8">
               <img
                 src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                alt="Apsara products"
+                alt="Glowme products"
                 className="w-full h-full object-cover"
               />
             </div>

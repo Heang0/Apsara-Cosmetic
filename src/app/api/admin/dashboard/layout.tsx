@@ -59,7 +59,7 @@ export default function AdminLayout({
             {/* Sidebar */}
             <div className="w-64 bg-white border-r border-gray-200 fixed h-full">
                 <div className="p-6">
-                    <h2 className="khmer-text text-xl font-bold text-gray-900">អប្សរា</h2>
+                    <h2 className="khmer-text text-xl font-bold text-gray-900">គ្លូមី</h2>
                     <p className="english-text text-sm text-gray-500">Admin Panel</p>
                 </div>
 

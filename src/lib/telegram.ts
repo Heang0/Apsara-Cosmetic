@@ -83,7 +83,7 @@ ${order.items.map((item: any) => `├ • ${item.name} x${item.quantity} - ${for
 📍 <b>Shipping to:</b>
 ${order.customer.address.street}, ${order.customer.address.city}, ${order.customer.address.province}
 
-Thank you for shopping with Apsara! 🎉
+Thank you for shopping with Glowme! 🎉
 `;
 
   return sendTelegramMessage(telegramChatId, message);

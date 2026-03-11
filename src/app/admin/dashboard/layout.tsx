@@ -92,7 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               {isMobileMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
             </button>
-            <h2 className="khmer-text text-xl font-bold">អប្សរា</h2>
+            <h2 className="khmer-text text-xl font-bold">គ្លូមី</h2>
           </div>
           <div className="flex items-center">
             <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
@@ -150,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-b border-gray-200">
           {isSidebarOpen ? (
             <>
-              <h2 className="khmer-text text-xl font-bold text-gray-900">អប្សរា</h2>
+              <h2 className="khmer-text text-xl font-bold text-gray-900">គ្លូមី</h2>
               <p className="english-text text-xs text-gray-400 mt-1">Admin Panel</p>
             </>
           ) : (

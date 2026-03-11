@@ -42,7 +42,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="khmer-text text-2xl font-bold text-gray-900">អប្សរា Admin</h1>
+          <h1 className="khmer-text text-2xl font-bold text-gray-900">Glowme Admin</h1>
           <p className="english-text text-gray-500">Admin Login</p>
         </div>
 
@@ -64,7 +64,7 @@ export default function AdminLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900"
-                placeholder="admin@apsara.com"
+                placeholder="admin@glowme.com"
                 required
               />
             </div>

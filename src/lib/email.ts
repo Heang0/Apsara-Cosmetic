@@ -49,7 +49,7 @@ export async function sendOrderReceipt(order: any, userEmail: string) {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Order Confirmation - Apsara</title>
+        <title>Order Confirmation - Glowme</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
         </style>
@@ -61,7 +61,7 @@ export async function sendOrderReceipt(order: any, userEmail: string) {
           
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #1a1a1a 0%, #333 100%); padding: 40px 30px; text-align: center;">
-            <h1 style="color: white; font-size: 32px; margin: 0;">APSARA</h1>
+            <h1 style="color: white; font-size: 32px; margin: 0;">GLOWME</h1>
             <p style="color: #ccc; font-size: 14px; margin: 5px 0 0;">Cosmetics</p>
           </div>
 
@@ -161,9 +161,9 @@ export async function sendOrderReceipt(order: any, userEmail: string) {
 
           <!-- Footer -->
           <div style="background-color: #f5f5f5; padding: 30px; text-align: center; border-top: 1px solid #eee;">
-            <p style="color: #666; font-size: 14px; margin: 0 0 10px;">Need help? Contact us at <a href="mailto:support@apsara.com" style="color: #1a1a1a; text-decoration: none;">support@apsara.com</a></p>
+            <p style="color: #666; font-size: 14px; margin: 0 0 10px;">Need help? Contact us at <a href="mailto:support@glowme.com" style="color: #1a1a1a; text-decoration: none;">support@glowme.com</a></p>
             <p style="color: #999; font-size: 12px; margin: 0;">
-              © ${new Date().getFullYear()} Apsara Cosmetics. All rights reserved.
+              © ${new Date().getFullYear()} Glowme. All rights reserved.
             </p>
           </div>
         </div>
@@ -173,7 +173,7 @@ export async function sendOrderReceipt(order: any, userEmail: string) {
 
     // Send email
     const info = await transporter.sendMail({
-      from: '"Apsara" <orders@apsara.com>',
+      from: '"Glowme" <orders@glowme.com>',
       to: userEmail,
       subject: `Order Confirmed! #${order.orderNumber}`,
       html: emailHtml,
@@ -231,7 +231,7 @@ View in Admin: ${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/orders
     `;
 
     const info = await transporter.sendMail({
-      from: '"Apsara" <orders@apsara.com>',
+      from: '"Glowme" <orders@glowme.com>',
       to: process.env.ADMIN_EMAIL,
       subject: `🛍️ New Order #${order.orderNumber}`,
       text: emailText,

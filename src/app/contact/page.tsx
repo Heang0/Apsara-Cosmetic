@@ -63,8 +63,8 @@ export default function ContactPage() {
       icon: EnvelopeIcon,
       titleKm: 'អ៊ីមែល',
       titleEn: 'Email',
-      details: ['info@apsara.com', 'support@apsara.com'],
-      action: 'mailto:info@apsara.com'
+      details: ['info@glowme.com', 'support@glowme.com'],
+      action: 'mailto:info@glowme.com'
     },
     {
       icon: MapPinIcon,

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
-export const ADMIN_SESSION_COOKIE = 'apsara_admin_session';
+export const ADMIN_SESSION_COOKIE = 'glowme_admin_session';
 
 interface AdminJwtPayload {
   id: string;

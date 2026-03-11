@@ -77,7 +77,7 @@ export async function GET(request: Request) {
         'Content-Type': 'application/json',
         Accept: 'application/json, text/plain, */*',
         Authorization: `Bearer ${accessToken}`,
-        'User-Agent': 'apsara-bakong-check/1.0'
+        'User-Agent': 'glowme-bakong-check/1.0'
       },
       body: JSON.stringify({ md5 }),
       cache: 'no-store'
