@@ -6,7 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'អប្សរា - Apsara',
+  title: 'គ្លូមី - Glowme',
   description: 'Traditional Khmer cosmetics',
 };
 

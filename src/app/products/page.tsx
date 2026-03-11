@@ -160,217 +160,102 @@ export default function ProductsPage() {
 
   return (
     <Layout>
-      {/* Hero Banner with Floating Product */}
-      <div className="relative w-full h-[220px] sm:h-[540px] lg:h-[700px] mb-8 overflow-hidden">
+      {/* Hero Banner - Clean Modern Design */}
+      <div className="relative w-full h-[150px] sm:h-[300px] lg:h-[500px] mb-12 overflow-hidden">
         <img
-          src="/images/banners/bannner1.jpg"
+          src="/images/banners/bannner.jpg"
           alt="Beauty banner"
           className="absolute inset-0 w-full h-full object-cover object-center"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-black/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
+      </div>
 
-        <div className="absolute inset-0 px-4 sm:px-6">
-          <div className="relative w-full h-full">
-            <div className="product-wrap product-left absolute left-[-6%] sm:left-[2%] lg:left-[7%] bottom-[5%] w-[190px] sm:w-[320px] lg:w-[430px] z-10">
-              <div className="floating-shadow shadow-a absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
-              <img
-                src="/images/seasonal/pro1.png"
-                alt="Floating cosmetic product"
-                className="floating-product product-a relative z-10 w-full h-auto object-contain"
-              />
-            </div>
-
-            <div className="product-wrap product-center absolute left-1/2 -translate-x-1/2 bottom-[4%] w-[255px] sm:w-[420px] lg:w-[560px] z-20">
-              <div className="floating-shadow shadow-b absolute left-1/2 -translate-x-1/2 bottom-0 w-[80%] h-6 sm:h-7 lg:h-8 rounded-full" />
-              <img
-                src="/images/seasonal/pro2.png"
-                alt="Floating cosmetic product"
-                className="floating-product product-b relative z-10 w-full h-auto object-contain"
-              />
-            </div>
-
-            <div className="product-wrap product-right absolute right-[-6%] sm:right-[2%] lg:right-[7%] bottom-[5%] w-[190px] sm:w-[320px] lg:w-[430px] z-10">
-              <div className="floating-shadow shadow-c absolute left-1/2 -translate-x-1/2 bottom-0 w-[78%] h-5 sm:h-6 lg:h-7 rounded-full" />
-              <img
-                src="/images/seasonal/pro3.png"
-                alt="Floating cosmetic product"
-                className="floating-product product-c relative z-10 w-full h-auto object-contain"
-              />
-            </div>
+      {/* Content Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 sm:-mt-8 relative z-10">
+        {/* Search Bar */}
+        <div className="animate-fade-in mb-6 sm:mb-8">
+          <div className="relative max-w-2xl mx-auto px-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              className={(language === 'km' ? 'khmer-text' : 'english-text') + ' w-full px-4 py-3 sm:px-5 sm:py-4 pl-12 sm:pl-14 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:bg-white transition-all duration-300 hover:shadow-lg'}
+            />
+            <MagnifyingGlassIcon className="absolute left-4 sm:left-5 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           </div>
         </div>
-      </div>
 
-      {/* Search Bar with Fade In */}
-      <div className="px-4 mb-6 animate-fade-in animation-delay-400">
-        <div className="relative max-w-2xl mx-auto">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={searchPlaceholder}
-            className={(language === 'km' ? 'khmer-text' : 'english-text') + ' w-full px-4 py-3 pl-12 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-300 hover:shadow-md'}
-          />
-          <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        </div>
-      </div>
-
-      {/* Categories with Staggered Animation */}
-      {categories.length > 0 && (
-        <div className="px-4 mb-8 animate-fade-in animation-delay-600">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md ' + 
-                (selectedCategory === 'all'
-                  ? 'bg-gray-900 text-white shadow-md scale-105'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
-            >
-              {allCategoriesText}
-            </button>
-
-            {categories.map((category, index) => (
+        {/* Categories */}
+        {categories.length > 0 && (
+          <div className="animate-fade-in animation-delay-200 mb-6 sm:mb-8">
+            <div className="flex flex-wrap gap-2 justify-center">
               <button
-                key={category.id}
-                onClick={() => handleCategoryClick(category.originalName)}
-                className={'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md ' + 
-                  (selectedCategory === category.originalName
-                    ? 'bg-gray-900 text-white shadow-md scale-105'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                onClick={() => setSelectedCategory('all')}
+                className={'px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ' +
+                  (selectedCategory === 'all'
+                    ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                   ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
-                style={{ animationDelay: `${index * 100}ms` }}
               >
-                {category.name}
+                {allCategoriesText}
               </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Products Grid with Staggered Cards */}
-      <div id="products-grid" className="px-4">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-gray-100 rounded-xl aspect-square animate-pulse" 
-                   style={{ animationDelay: `${i * 100}ms` }}></div>
-            ))}
-          </div>
-        ) : filteredProducts.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {filteredProducts.slice(0, visibleProducts).map((product, index) => (
-                <div
-                  key={product._id}
-                  className="animate-fade-in-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category.originalName)}
+                  className={'px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ' +
+                    (selectedCategory === category.originalName
+                      ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                    ) + ' ' + (language === 'km' ? 'khmer-text' : 'english-text')}
                 >
-                  <ProductCard product={product} />
-                </div>
+                  {category.name}
+                </button>
               ))}
             </div>
-            
-            {/* Infinite Scroll Loader */}
-            {hasMore && (
-              <div ref={loaderRef} className="flex justify-center py-8">
-                <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-16 bg-gray-50 rounded-xl animate-fade-in">
-            <p className="khmer-text text-gray-400 text-lg mb-2">{noProductsText}</p>
           </div>
         )}
+
+        {/* Products Grid */}
+        <div id="products-grid">
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-gray-100 rounded-2xl aspect-square animate-pulse"
+                     style={{ animationDelay: `${i * 100}ms` }}></div>
+              ))}
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {filteredProducts.slice(0, visibleProducts).map((product, index) => (
+                  <div
+                    key={product._id}
+                    className="animate-fade-in-up"
+                    style={{ animationDelay: `${index * 80}ms` }}
+                  >
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Infinite Scroll Loader */}
+              {hasMore && (
+                <div ref={loaderRef} className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-20 bg-gray-50 rounded-2xl">
+              <p className="khmer-text text-gray-400 text-lg">{noProductsText}</p>
+            </div>
+          )}
+        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes oceanFloat {
-          0% {
-            transform: translate3d(-10px, 0px, 0) rotate(-1deg);
-          }
-          25% {
-            transform: translate3d(-3px, -8px, 0) rotate(0.4deg);
-          }
-          50% {
-            transform: translate3d(10px, -3px, 0) rotate(1.2deg);
-          }
-          75% {
-            transform: translate3d(3px, -10px, 0) rotate(-0.6deg);
-          }
-          100% {
-            transform: translate3d(-10px, 0px, 0) rotate(-1deg);
-          }
-        }
-
-        @keyframes oceanShadow {
-          0%,
-          100% {
-            transform: translateX(-8px) scale(0.9);
-            opacity: 0.25;
-            filter: blur(10px);
-          }
-          50% {
-            transform: translateX(8px) scale(1.04);
-            opacity: 0.38;
-            filter: blur(12px);
-          }
-        }
-
-        .floating-product {
-          animation: oceanFloat 18s ease-in-out infinite;
-          transform-origin: 50% 85%;
-          will-change: transform;
-          filter:
-            drop-shadow(0 10px 18px rgba(0, 0, 0, 0.2))
-            drop-shadow(0 24px 36px rgba(0, 0, 0, 0.28));
-        }
-
-        .floating-shadow {
-          animation: oceanShadow 18s ease-in-out infinite;
-          will-change: transform, opacity, filter;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(14, 24, 38, 0.45) 0%,
-            rgba(14, 24, 38, 0.25) 45%,
-            rgba(14, 24, 38, 0.06) 75%,
-            rgba(14, 24, 38, 0) 100%
-          );
-          filter: blur(5px);
-        }
-
-        .product-a {
-          animation-duration: 20s;
-          animation-delay: -2.5s;
-        }
-
-        .product-b {
-          animation-duration: 18s;
-          animation-delay: -0.8s;
-        }
-
-        .product-c {
-          animation-duration: 22s;
-          animation-delay: -4.2s;
-        }
-
-        .shadow-a {
-          animation-duration: 20s;
-          animation-delay: -2.5s;
-        }
-
-        .shadow-b {
-          animation-duration: 18s;
-          animation-delay: -0.8s;
-        }
-
-        .shadow-c {
-          animation-duration: 22s;
-          animation-delay: -4.2s;
-        }
-      `}</style>
     </Layout>
   );
 }

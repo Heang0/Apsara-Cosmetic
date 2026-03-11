@@ -60,7 +60,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Link href={'/products/' + product.slug} className="block aspect-square bg-gray-50 overflow-hidden">
         <div className="relative w-full h-full overflow-hidden">
           {mainImage ? (
-            <img 
+            <img
               src={getOptimizedImage(mainImage, 400)}
               alt={productName}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
@@ -85,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h3 className={'text-sm font-medium text-gray-900 mb-1 line-clamp-1 transition-colors group-hover:text-gray-700 ' + (language === 'km' ? 'khmer-text' : 'english-text')}>
             {productName}
           </h3>
-          
+
           <div className="flex items-baseline gap-2 mb-3">
             <span className="english-text text-base font-semibold text-gray-900">
               {formatPrice(displayPrice)}
@@ -98,7 +98,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </Link>
 
-        <button 
+        <button
           onClick={handleAddToCart}
           className="w-full bg-gray-900 text-white py-2.5 text-sm font-medium rounded-lg hover:bg-gray-800 transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95"
         >

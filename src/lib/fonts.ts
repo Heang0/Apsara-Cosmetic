@@ -1,4 +1,4 @@
-﻿import { Kantumruy_Pro, Inter, Playfair_Display } from 'next/font/google';
+﻿import { Kantumruy_Pro, Plus_Jakarta_Sans, Playfair_Display } from 'next/font/google';
 
 // Khmer Font - Kantumruy Pro (Modern, clean Khmer font)
 export const khmerFont = Kantumruy_Pro({
@@ -8,10 +8,10 @@ export const khmerFont = Kantumruy_Pro({
   variable: '--font-khmer',
 });
 
-// English Font - Inter (Professional, highly readable)
-export const englishFont = Inter({
+// English Font - Plus Jakarta Sans (Modern, professional, premium feel)
+export const englishFont = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
   variable: '--font-english',
 });
