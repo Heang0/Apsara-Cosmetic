@@ -13,9 +13,9 @@ export async function GET(request: Request) {
     const id = searchParams.get('id');
     const slug = searchParams.get('slug');
     const category = searchParams.get('category');
-    
+
     await connectDB();
-    
+
     if (id) {
       const product = await Product.findById(id);
       if (!product) {
@@ -24,9 +24,11 @@ export async function GET(request: Request) {
           { status: 404 }
         );
       }
-      return NextResponse.json(product);
+      const response = NextResponse.json(product);
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
     }
-    
+
     if (slug) {
       const product = await Product.findOne({ slug: slug });
       if (!product) {
@@ -35,16 +37,25 @@ export async function GET(request: Request) {
           { status: 404 }
         );
       }
-      return NextResponse.json(product);
+      const response = NextResponse.json(product);
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+      return response;
     }
-    
+
     let query = {};
     if (category) {
       query = { category: category };
     }
+
+    // Optimize: Only fetch necessary fields
+    const products = await Product.find(query)
+      .select('name nameEn slug price images isOnSale salePrice category categoryEn createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
     
-    const products = await Product.find(query).sort({ createdAt: -1 });
-    return NextResponse.json(products);
+    const response = NextResponse.json(products);
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    return response;
   } catch (error) {
     console.error('GET products error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

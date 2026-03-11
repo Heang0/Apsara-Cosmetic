@@ -19,6 +19,9 @@ export default function RootLayout({
 
   return (
     <html lang="km" className={fontVariables}>
+      <head>
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
+      </head>
       <body className="font-english antialiased">
         <LanguageProvider>
           <AuthProvider>

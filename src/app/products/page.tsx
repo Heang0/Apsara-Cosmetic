@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import ProductCard from '@/components/ProductCard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -76,7 +76,9 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/products', {
+        next: { revalidate: 60 } // ISR: Revalidate every 60 seconds
+      });
       const rawData = await res.json();
       const data: Product[] = Array.isArray(rawData) ? rawData : [];
 
@@ -130,7 +132,7 @@ export default function ProductsPage() {
     setCategories(uniqueCats);
   };
 
-  const filterProducts = () => {
+  const filterProducts = useCallback(() => {
     let filtered = [...products];
 
     if (selectedCategory !== 'all') {
@@ -146,7 +148,7 @@ export default function ProductsPage() {
     }
 
     setFilteredProducts(filtered);
-  };
+  }, [products, selectedCategory, searchQuery, language]);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
