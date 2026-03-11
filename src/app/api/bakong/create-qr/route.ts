@@ -11,6 +11,17 @@ const cleanEnvValue = (value?: string) => {
   return String(value).trim().replace(/^['"]|['"]$/g, '');
 };
 
+const renderQrCode = (khqrString: string) =>
+  QRCode.toDataURL(khqrString, {
+    errorCorrectionLevel: 'M',
+    margin: 1,
+    width: 320,
+    color: {
+      dark: '#000000',
+      light: '#FFFFFF'
+    }
+  });
+
 export async function POST(request: Request) {
   try {
     const originError = enforceSameOrigin(request);
@@ -47,7 +58,9 @@ export async function POST(request: Request) {
     }
 
     await connectDB();
-    const order = await Order.findById(orderId).select('total orderNumber paymentStatus orderStatus');
+    const order = await Order.findById(orderId).select(
+      'total orderNumber paymentStatus orderStatus bakongQrCode bakongExpiresAt'
+    );
 
     if (!order) {
       return NextResponse.json(
@@ -79,6 +92,24 @@ export async function POST(request: Request) {
     }
 
     const billNumber = String(order.orderNumber || body?.orderNumber || `ORDER-${Date.now()}`).slice(0, 25);
+    const existingExpiryMs = order.bakongExpiresAt ? new Date(order.bakongExpiresAt).getTime() : 0;
+
+    if (order.bakongQrCode && existingExpiryMs > Date.now()) {
+      const qrCode = await renderQrCode(String(order.bakongQrCode));
+      const khqrAmount = isUSD
+        ? Number(amount.toFixed(2))
+        : Math.round(amount * exchangeRate);
+
+      return NextResponse.json({
+        qrCode,
+        merchantName,
+        amountUSD: Number(amount.toFixed(2)),
+        amountKHR: isUSD ? null : khqrAmount,
+        currency: isUSD ? 'USD' : 'KHR',
+        orderId,
+        expiresAt: new Date(existingExpiryMs).toISOString()
+      });
+    }
 
     const { BakongKHQR, IndividualInfo, khqrData } = await import('bakong-khqr');
     const khqr = new BakongKHQR();
@@ -116,15 +147,7 @@ export async function POST(request: Request) {
 
     const khqrString = khqrResponse.data.qr;
     const md5 = khqrResponse.data.md5;
-    const qrCode = await QRCode.toDataURL(khqrString, {
-      errorCorrectionLevel: 'M',
-      margin: 1,
-      width: 320,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
-    });
+    const qrCode = await renderQrCode(khqrString);
 
     await Order.findByIdAndUpdate(orderId, {
       bakongTransactionId: md5,

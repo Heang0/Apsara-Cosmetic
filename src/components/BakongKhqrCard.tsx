@@ -120,7 +120,7 @@ export default function BakongKhqrCard({
         </div>
       ) : null}
 
-      <div className="mx-auto w-full max-w-[380px] rounded-[34px] bg-[#f3f4f6] p-2 shadow-[0_28px_70px_rgba(0,0,0,0.18)]">
+      <div className="mx-auto w-full max-w-[360px] rounded-[34px] bg-[#f3f4f6] p-2 shadow-[0_28px_70px_rgba(0,0,0,0.18)] sm:max-w-[380px]">
         <div className="overflow-hidden rounded-[30px]">
         <div className="flex h-[58px] items-center justify-center rounded-t-[30px] bg-[#E1232E] px-6">
           <img
@@ -130,7 +130,7 @@ export default function BakongKhqrCard({
           />
         </div>
 
-        <div className="relative bg-white px-5 pb-4 pt-5 sm:px-6 sm:pb-5">
+        <div className="relative bg-white px-4 pb-4 pt-5 sm:px-6 sm:pb-5">
           <div
             aria-hidden="true"
             className="absolute right-0 top-0 h-[64px] w-[68px] bg-[#E1232E]"
@@ -160,11 +160,12 @@ export default function BakongKhqrCard({
             ) : null}
 
             <div className="mt-4 rounded-[26px] border border-neutral-200 bg-[#fafafa] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-              <div className="relative mx-auto aspect-square w-full max-w-[232px] rounded-[22px] bg-white p-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.08)]">
+              <div className="grid place-items-center">
+                <div className="relative aspect-square w-[218px] rounded-[22px] bg-white p-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.08)] sm:w-[232px]">
                 <img
                   src={qrCode}
                   alt="Bakong QR"
-                  className="h-full w-full rounded-[18px] object-contain"
+                  className="block h-full w-full rounded-[18px] object-contain"
                 />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <div className="h-9 w-9 overflow-hidden rounded-full bg-white p-1 shadow-[0_8px_18px_rgba(0,0,0,0.16)] ring-4 ring-white">
@@ -175,6 +176,7 @@ export default function BakongKhqrCard({
                     />
                   </div>
                 </div>
+              </div>
               </div>
             </div>
 
