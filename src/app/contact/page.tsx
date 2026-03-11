@@ -10,7 +10,8 @@ import {
   MapPinIcon,
   ClockIcon,
   PaperAirplaneIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
 
 export default function ContactPage() {
@@ -53,11 +54,29 @@ export default function ContactPage() {
 
   const contactInfo = [
     {
+      icon: MapPinIcon,
+      titleKm: 'អាសយដ្ឋាន',
+      titleEn: 'Address',
+      details: [
+        language === 'km' 
+          ? 'ផ្លូវជាតិលេខ1 ភូមិតាព្រហ្ម សង្កាត់ព្រែកឯង ខណ្ឌច្បារអំពៅ'
+          : 'National Road 1, Ta Prohm Village, Preaek Aeng Commune, Chbar Ampov District'
+      ],
+      action: 'https://maps.google.com'
+    },
+    {
       icon: PhoneIcon,
       titleKm: 'ទូរស័ព្ទ',
       titleEn: 'Phone',
-      details: ['+855 12 345 678', '+855 98 765 432'],
-      action: 'tel:+85512345678'
+      details: ['015 299 888'],
+      action: 'tel:015299888'
+    },
+    {
+      icon: ChatBubbleLeftIcon,
+      titleKm: 'កុម្ម៉ង់តាម Facebook',
+      titleEn: 'Order via Facebook',
+      details: ['GlowMe Store'],
+      action: 'https://facebook.com/GlowMeStore'
     },
     {
       icon: EnvelopeIcon,
@@ -66,20 +85,6 @@ export default function ContactPage() {
       details: ['info@glowme.com', 'support@glowme.com'],
       action: 'mailto:info@glowme.com'
     },
-    {
-      icon: MapPinIcon,
-      titleKm: 'អាសយដ្ឋាន',
-      titleEn: 'Address',
-      details: ['#123, Street 456', 'Phnom Penh, Cambodia'],
-      action: 'https://maps.google.com/?q=Phnom+Penh+Cambodia'
-    },
-    {
-      icon: ClockIcon,
-      titleKm: 'ម៉ោងបើក',
-      titleEn: 'Business Hours',
-      details: ['Mon - Fri: 8:00 AM - 6:00 PM', 'Sat - Sun: 9:00 AM - 4:00 PM'],
-      action: '#'
-    }
   ];
 
   const faqs = [
